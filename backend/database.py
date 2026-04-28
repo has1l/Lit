@@ -186,6 +186,118 @@ def init_db() -> None:
             seed_messages,
         )
 
+    # ── Геймификация: цели ────────────────────────────────────────────────────
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS goals (
+            id             INTEGER PRIMARY KEY AUTOINCREMENT,
+            employee_email TEXT    NOT NULL REFERENCES employees(email),
+            created_by     TEXT    NOT NULL REFERENCES employees(email),
+            title          TEXT    NOT NULL,
+            description    TEXT    NOT NULL DEFAULT '',
+            points         INTEGER NOT NULL DEFAULT 10,
+            month          INTEGER NOT NULL,
+            year           INTEGER NOT NULL,
+            status         TEXT    NOT NULL DEFAULT 'active',
+            created_at     TEXT    NOT NULL
+                DEFAULT (strftime('%Y-%m-%dT%H:%M:%S', 'now', 'localtime'))
+        )
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS daily_selections (
+            id             INTEGER PRIMARY KEY AUTOINCREMENT,
+            goal_id        INTEGER NOT NULL REFERENCES goals(id),
+            employee_email TEXT    NOT NULL REFERENCES employees(email),
+            date           TEXT    NOT NULL,
+            completed      INTEGER NOT NULL DEFAULT 0,
+            completed_at   TEXT,
+            UNIQUE(goal_id, employee_email, date)
+        )
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS employee_points (
+            employee_email   TEXT    PRIMARY KEY REFERENCES employees(email),
+            points_total     INTEGER NOT NULL DEFAULT 0,
+            streak_days      INTEGER NOT NULL DEFAULT 0,
+            last_active_date TEXT    DEFAULT NULL
+        )
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS bonus_records (
+            id             INTEGER PRIMARY KEY AUTOINCREMENT,
+            employee_email TEXT    NOT NULL REFERENCES employees(email),
+            month          INTEGER NOT NULL,
+            year           INTEGER NOT NULL,
+            score_pct      REAL    NOT NULL,
+            earned_points  INTEGER NOT NULL,
+            max_points     INTEGER NOT NULL,
+            status         TEXT    NOT NULL DEFAULT 'pending',
+            reviewed_by    TEXT,
+            reviewed_at    TEXT,
+            created_at     TEXT    NOT NULL
+                DEFAULT (strftime('%Y-%m-%dT%H:%M:%S', 'now', 'localtime')),
+            UNIQUE(employee_email, month, year)
+        )
+    """)
+
+    if cur.execute("SELECT COUNT(*) FROM goals").fetchone()[0] == 0:
+        seed_goals = [
+            ("work@portal-test.1221systems.ru", "dir@portal-test.1221systems.ru",
+             "Завершить код-ревью", "Проверить открытые PR в репозитории", 20, 4, 2026),
+            ("work@portal-test.1221systems.ru", "dir@portal-test.1221systems.ru",
+             "Написать unit-тесты", "Покрыть тестами новый модуль авторизации", 30, 4, 2026),
+            ("work@portal-test.1221systems.ru", "dir@portal-test.1221systems.ru",
+             "Обновить документацию", "README и комментарии к API-эндпоинтам", 15, 4, 2026),
+            ("work@portal-test.1221systems.ru", "dir@portal-test.1221systems.ru",
+             "Провести встречу с командой", "Синк по текущим задачам спринта", 25, 4, 2026),
+            ("work@portal-test.1221systems.ru", "dir@portal-test.1221systems.ru",
+             "Исправить баги из трекера", "Закрыть задачи с приоритетом HIGH", 35, 4, 2026),
+            ("work@portal-test.1221systems.ru", "dir@portal-test.1221systems.ru",
+             "Подготовить презентацию", "Слайды для демо в конце спринта", 40, 4, 2026),
+        ]
+        goal_ids = []
+        for g in seed_goals:
+            cur.execute(
+                "INSERT INTO goals (employee_email,created_by,title,description,points,month,year) "
+                "VALUES (?,?,?,?,?,?,?)", g
+            )
+            goal_ids.append(cur.lastrowid)
+
+        # Исторические дни: 22–25 апреля
+        history_days = [
+            ("2026-04-22", [0, 1, 2], [0, 1]),       # 3 выбрано, 2 выполнено (66%)
+            ("2026-04-23", [0, 1, 3], [0, 1, 3]),     # 3 выбрано, все выполнены
+            ("2026-04-24", [2, 4, 5], [2, 4, 5]),     # 3 выбрано, все выполнены
+            ("2026-04-25", [0, 3, 4], [0, 3, 4]),     # 3 выбрано, все выполнены
+        ]
+        for date, selected_idx, completed_idx in history_days:
+            for idx in selected_idx:
+                completed = 1 if idx in completed_idx else 0
+                completed_at = f"{date}T18:00:00" if completed else None
+                cur.execute(
+                    "INSERT OR IGNORE INTO daily_selections "
+                    "(goal_id, employee_email, date, completed, completed_at) VALUES (?,?,?,?,?)",
+                    (goal_ids[idx], "work@portal-test.1221systems.ru", date, completed, completed_at),
+                )
+
+        cur.execute(
+            "INSERT OR IGNORE INTO employee_points (employee_email, points_total, streak_days, last_active_date) "
+            "VALUES (?,?,?,?)",
+            ("work@portal-test.1221systems.ru", 215, 3, "2026-04-25"),
+        )
+        cur.execute(
+            "INSERT OR IGNORE INTO employee_points (employee_email, points_total, streak_days, last_active_date) "
+            "VALUES (?,?,?,?)",
+            ("dir@portal-test.1221systems.ru", 480, 0, "2026-04-20"),
+        )
+        cur.execute(
+            "INSERT OR IGNORE INTO employee_points (employee_email, points_total, streak_days, last_active_date) "
+            "VALUES (?,?,?,?)",
+            ("hr@portal-test.1221systems.ru", 120, 0, "2026-04-15"),
+        )
+
     conn.commit()
     conn.close()
     print(f"[DB] База данных инициализирована: {DB_PATH}")

@@ -1,31 +1,13 @@
-import { CalendarDays, Check, ChevronDown, ChevronRight, ClipboardList, Clock3, WalletCards } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { CalendarDays, Check, ChevronDown, ChevronRight, ClipboardList, Clock3, Flame, Sparkles, Trophy, WalletCards } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Button from '../components/Button.jsx';
 import Card from '../components/Card.jsx';
 import { useEmployeeData } from '../hooks/useEmployeeData.js';
 import { formatDay, formatAmount, paymentTypeRu, pluralDays } from '../lib/format.js';
-
-const defaultTasks = [
-  { id: 1, text: 'Проверить рабочую почту', done: false },
-  { id: 2, text: 'Ответить на сообщения команды', done: false },
-  { id: 3, text: 'Подготовить краткий отчёт', done: false },
-  { id: 4, text: 'Обновить статус задач', done: false },
-  { id: 5, text: 'Ознакомиться с HR-уведомлениями', done: false },
-];
-
-const defaultWorkdayState = {
-  dayStarted: false,
-  tasks: defaultTasks,
-  dayCompleted: false,
-  reason: '',
-};
-
-const defaultWeekStats = {
-  totalDays: 5,
-  completedDays: 3,
-  totalTasks: 20,
-  completedTasks: 14,
-};
+import {
+  fetchGoals, fetchDailyTasks, selectDailyTasks,
+  completeDailyTask, finishDay, fetchGamificationStats,
+} from '../api/goals.js';
 
 const RECOMMENDATION_DEFS = [
   { id: 1, type: 'vacation' },
@@ -34,103 +16,103 @@ const RECOMMENDATION_DEFS = [
 ];
 
 const statusOptions = {
-  work: { label: 'В работе', dot: 'bg-purple-500' },
-  break: { label: 'Перерыв', dot: 'bg-yellow-400' },
+  work:    { label: 'В работе',  dot: 'bg-purple-500' },
+  break:   { label: 'Перерыв',  dot: 'bg-yellow-400' },
   offline: { label: 'Оффлайн', dot: 'bg-red-500' },
 };
 
-function loadWorkdayState() {
-  try {
-    const savedState = window.localStorage.getItem('techna-workday');
-    const parsedState = savedState ? JSON.parse(savedState) : defaultWorkdayState;
-    const hasActualTaskSet =
-      Array.isArray(parsedState.tasks) &&
-      parsedState.tasks.length === defaultTasks.length &&
-      parsedState.tasks.every((task) => defaultTasks.some((defaultTask) => defaultTask.text === task.text));
-
-    return {
-      ...defaultWorkdayState,
-      ...parsedState,
-      tasks: hasActualTaskSet ? parsedState.tasks : defaultTasks,
-    };
-  } catch {
-    return defaultWorkdayState;
-  }
+function loadState(key, def) {
+  try { const v = localStorage.getItem(key); return v ? { ...def, ...JSON.parse(v) } : def; }
+  catch { return def; }
 }
 
-function loadWeekStats() {
-  try {
-    const savedStats = window.localStorage.getItem('techna-week-stats');
-    return savedStats ? { ...defaultWeekStats, ...JSON.parse(savedStats) } : defaultWeekStats;
-  } catch {
-    return defaultWeekStats;
-  }
-}
-
-function loadRecommendationCompletions() {
-  try {
-    const saved = window.localStorage.getItem('techna-completions');
-    return saved ? JSON.parse(saved) : {};
-  } catch {
-    return {};
-  }
-}
-
-function loadStatus() {
-  try {
-    const savedStatus = window.localStorage.getItem('techna-status');
-    return savedStatus === 'done' ? 'offline' : savedStatus || 'offline';
-  } catch {
-    return 'offline';
-  }
-}
-
-function loadDailyReports() {
-  try {
-    const savedReports = window.localStorage.getItem('techna-daily-reports');
-    return savedReports ? JSON.parse(savedReports) : [];
-  } catch {
-    return [];
-  }
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
 }
 
 export default function Dashboard({ openChatWithPrompt, navigate, profile }) {
   const { data: myData } = useEmployeeData();
   const workdayRef = useRef(null);
-  const [workdayState, setWorkdayState] = useState(loadWorkdayState);
-  const [weekStats] = useState(loadWeekStats);
-  const [completions, setCompletions] = useState(loadRecommendationCompletions);
-  const [status, setStatus] = useState(loadStatus);
-  const [dailyReports, setDailyReports] = useState(loadDailyReports);
-  const [statusOpen, setStatusOpen] = useState(false);
-  const [showModal, setShowModal] = useState(false);
-  const [reasonDraft, setReasonDraft] = useState('');
-  const { tasks, dayStarted, dayCompleted, reason } = workdayState;
-  const isDayDone = dayCompleted;
-  const availableStatusOptions = useMemo(() => {
-    if (!dayStarted || isDayDone) return [];
+  const today = todayStr();
+
+  // ── Состояние рабочего дня ───────────────────────────────────────────────
+  const [dayStarted,   setDayStarted]   = useState(() => loadState('lit-day', {}).dayStarted ?? false);
+  const [dayCompleted, setDayCompleted] = useState(() => loadState('lit-day', {}).dayCompleted ?? false);
+  const [dayDate,      setDayDate]      = useState(() => loadState('lit-day', {}).dayDate ?? null);
+  const [status,       setStatus]       = useState(() => {
+    const s = localStorage.getItem('techna-status');
+    return s === 'done' ? 'offline' : (s || 'offline');
+  });
+  const [statusOpen,   setStatusOpen]   = useState(false);
+  const [showModal,    setShowModal]    = useState(false);
+  const [reasonDraft,  setReasonDraft]  = useState('');
+  const [dayResult,    setDayResult]    = useState(null);
+
+  // ── Цели: месячные и ежедневные ──────────────────────────────────────────
+  const [monthGoals,    setMonthGoals]    = useState([]);
+  const [dailyTasks,    setDailyTasks]    = useState([]);   // выбранные на сегодня
+  const [goalsLoading,  setGoalsLoading]  = useState(true);
+  const [selectMode,    setSelectMode]    = useState(false); // режим выбора задач
+  const [selectedIds,   setSelectedIds]   = useState(new Set());
+
+  // ── Геймификация ─────────────────────────────────────────────────────────
+  const [gameStats, setGameStats] = useState(null);
+
+  // ── Рекомендации ─────────────────────────────────────────────────────────
+  const [completions, setCompletions] = useState(() => loadState('techna-completions', {}));
+  const [dailyReports, setDailyReports] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('techna-daily-reports') || '[]'); }
+    catch { return []; }
+  });
+
+  // Сброс состояния если дата изменилась
+  useEffect(() => {
+    const saved = loadState('lit-day', {});
+    if (saved.dayDate && saved.dayDate !== today) {
+      localStorage.removeItem('lit-day');
+      setDayStarted(false);
+      setDayCompleted(false);
+      setDayDate(null);
+    }
+  }, [today]);
+
+  // Сохранение состояния дня
+  useEffect(() => {
+    localStorage.setItem('lit-day', JSON.stringify({ dayStarted, dayCompleted, dayDate }));
+  }, [dayStarted, dayCompleted, dayDate]);
+
+  useEffect(() => { localStorage.setItem('techna-status', status); }, [status]);
+  useEffect(() => { localStorage.setItem('techna-completions', JSON.stringify(completions)); }, [completions]);
+  useEffect(() => { localStorage.setItem('techna-daily-reports', JSON.stringify(dailyReports)); }, [dailyReports]);
+
+  // Загрузка данных
+  useEffect(() => {
+    Promise.all([fetchGoals(), fetchDailyTasks(today), fetchGamificationStats()])
+      .then(([goals, daily, stats]) => {
+        setMonthGoals(goals);
+        setDailyTasks(daily);
+        setGameStats(stats);
+        // Если задачи уже выбраны и день не начат — автоматически считаем день начатым
+        if (daily.length > 0 && !dayCompleted) {
+          setDayStarted(true);
+          setDayDate(today);
+          setStatus('work');
+        }
+      })
+      .catch(() => {})
+      .finally(() => setGoalsLoading(false));
+  }, [today]);
+
+  const allDone = useMemo(() => dailyTasks.length > 0 && dailyTasks.every((t) => t.completed), [dailyTasks]);
+  const completedCount = useMemo(() => dailyTasks.filter((t) => t.completed).length, [dailyTasks]);
+  const availableStatuses = useMemo(() => {
+    if (!dayStarted || dayCompleted) return [];
     return status === 'break' ? ['work'] : ['break'];
-  }, [dayStarted, isDayDone, status]);
-  const allTasksDone = useMemo(() => tasks.every((task) => task.done), [tasks]);
-  const completedTasksCount = useMemo(() => tasks.filter((task) => task.done).length, [tasks]);
-  const progressPercent = useMemo(
-    () => Math.round((weekStats.completedTasks / weekStats.totalTasks) * 100),
-    [weekStats],
-  );
-  const averageTasksPerDay = useMemo(
-    () => Math.round(weekStats.completedTasks / weekStats.completedDays),
-    [weekStats],
-  );
-  const progressText = useMemo(() => {
-    if (progressPercent >= 80) return 'Отличная работа 🔥';
-    if (progressPercent >= 50) return 'Хороший темп 👍';
-    return 'Можно лучше 💪';
-  }, [progressPercent]);
+  }, [dayStarted, dayCompleted, status]);
 
   const technaRecommendations = useMemo(() => {
     const leave = myData?.leave;
     const nextPayment = myData?.upcoming_payments?.[0];
-
     const texts = {
       vacation: leave
         ? `Остаток отпуска: ${pluralDays(leave.remaining_days)} — не забудьте запланировать`
@@ -140,131 +122,110 @@ export default function Dashboard({ openChatWithPrompt, navigate, profile }) {
         ? `${paymentTypeRu(nextPayment.payment_type)} ${formatDay(nextPayment.payment_date)} — ${formatAmount(nextPayment.amount)}`
         : 'Проверьте раздел зарплаты для информации о выплатах',
     };
-
     return RECOMMENDATION_DEFS.map((def) => ({
-      ...def,
-      text: texts[def.type],
-      completed: completions[def.id] ?? false,
+      ...def, text: texts[def.type], completed: completions[def.id] ?? false,
     }));
   }, [myData, completions]);
 
-  useEffect(() => {
-    window.localStorage.setItem('techna-workday', JSON.stringify(workdayState));
-  }, [workdayState]);
-
-  useEffect(() => {
-    window.localStorage.setItem('techna-week-stats', JSON.stringify(weekStats));
-  }, [weekStats]);
-
-  useEffect(() => {
-    window.localStorage.setItem('techna-completions', JSON.stringify(completions));
-  }, [completions]);
-
-  useEffect(() => {
-    window.localStorage.setItem('techna-status', status);
-  }, [status]);
-
-  useEffect(() => {
-    window.localStorage.setItem('techna-daily-reports', JSON.stringify(dailyReports));
-  }, [dailyReports]);
-
-  function addDailyReport(reportReason = null) {
-    const report = {
-      id: Date.now(),
-      date: new Date().toLocaleDateString(),
-      completed: tasks.filter((task) => task.done).length,
-      total: tasks.length,
-      reason: reportReason || null,
-    };
-
-    setDailyReports((current) => [report, ...current]);
-  }
-
-  const toggleTask = (id) => {
-    if (isDayDone) return;
-
-    setWorkdayState((current) => ({
-      ...current,
-      tasks: current.tasks.map((task) =>
-        task.id === id ? { ...task, done: !task.done } : task,
-      ),
-    }));
-  };
+  // ── Обработчики ──────────────────────────────────────────────────────────
 
   function startDay() {
-    setWorkdayState((current) => ({
-      ...current,
-      dayStarted: true,
-      dayCompleted: false,
-      reason: '',
-    }));
-    setStatus('work');
-  }
-
-  function finishDay() {
-    if (allTasksDone) {
-      addDailyReport(null);
-      setWorkdayState((current) => ({ ...current, dayCompleted: true, reason: '' }));
-      setStatus('offline');
+    if (monthGoals.length === 0) {
+      // нет целей — запускаем день без задач
+      setDayStarted(true);
+      setDayDate(today);
+      setStatus('work');
       return;
     }
+    setSelectMode(true);
+  }
 
-    setReasonDraft(reason);
+  async function confirmTaskSelection() {
+    if (selectedIds.size === 0) return;
+    try {
+      const tasks = await selectDailyTasks([...selectedIds], today);
+      setDailyTasks(tasks);
+      setDayStarted(true);
+      setDayDate(today);
+      setStatus('work');
+      setSelectMode(false);
+    } catch (e) {
+      if (e?.status === 409) {
+        // задачи уже выбраны (race) — просто перезагружаем
+        const tasks = await fetchDailyTasks(today);
+        setDailyTasks(tasks);
+        setDayStarted(true);
+        setDayDate(today);
+        setStatus('work');
+        setSelectMode(false);
+      }
+    }
+  }
+
+  async function toggleTask(selectionId) {
+    if (dayCompleted) return;
+    const task = dailyTasks.find((t) => t.id === selectionId);
+    if (!task || task.completed) return;
+    try {
+      await completeDailyTask(selectionId);
+      setDailyTasks((prev) => prev.map((t) => t.id === selectionId ? { ...t, completed: 1 } : t));
+    } catch {}
+  }
+
+  async function handleFinishDay() {
+    if (allDone) {
+      await doFinish();
+      return;
+    }
+    setReasonDraft('');
     setShowModal(true);
   }
 
-  function finishDayWithReason() {
-    const trimmedReason = reasonDraft.trim();
-
-    addDailyReport(trimmedReason);
-    setWorkdayState((current) => ({
-      ...current,
-      dayStarted: true,
-      dayCompleted: true,
-      reason: trimmedReason,
-    }));
+  async function doFinish() {
+    try {
+      const result = await finishDay(today);
+      setDayResult(result);
+      // Обновляем статы
+      fetchGamificationStats().then(setGameStats).catch(() => {});
+    } catch {}
+    setDailyReports((prev) => [{
+      id: Date.now(),
+      date: new Date().toLocaleDateString(),
+      completed: completedCount,
+      total: dailyTasks.length,
+    }, ...prev]);
+    setDayCompleted(true);
     setStatus('offline');
     setShowModal(false);
   }
 
   function startNewDay() {
-    setWorkdayState({
-      ...defaultWorkdayState,
-      tasks: defaultTasks.map((task) => ({ ...task })),
-    });
+    setDayStarted(false);
+    setDayCompleted(false);
+    setDayDate(null);
+    setDailyTasks([]);
+    setSelectedIds(new Set());
+    setDayResult(null);
     setStatus('offline');
-    setReasonDraft('');
-    setShowModal(false);
+    localStorage.removeItem('lit-day');
   }
 
-  function getRecommendationIcon(type) {
-    if (type === 'vacation') return CalendarDays;
-    if (type === 'tasks') return ClipboardList;
-    return WalletCards;
+  function handleRecommendationClick(rec) {
+    setCompletions((c) => ({ ...c, [rec.id]: true }));
+    if (rec.type === 'vacation') navigate('vacation');
+    if (rec.type === 'tasks') workdayRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (rec.type === 'salary') navigate('salary');
   }
 
-  function handleRecommendationClick(recommendation) {
-    setCompletions((current) => ({ ...current, [recommendation.id]: true }));
-
-    if (recommendation.type === 'vacation') {
-      navigate('vacation');
-    }
-
-    if (recommendation.type === 'tasks') {
-      workdayRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-
-    if (recommendation.type === 'salary') {
-      navigate('salary');
-    }
+  function askTechna() {
+    const goalsList = monthGoals.map((g, i) => `${i + 1}. ${g.title} (${g.points} pts)`).join(', ');
+    openChatWithPrompt(
+      `Посоветуй, какие задачи выбрать на сегодня из моего списка целей на месяц: ${goalsList}. Учти что сегодня ${new Date().toLocaleDateString('ru')}.`
+    );
   }
 
-  function selectStatus(nextStatus) {
-    if (!availableStatusOptions.includes(nextStatus)) return;
-    setStatus(nextStatus);
-    setStatusOpen(false);
-  }
-
+  const levelKey = gameStats?.level?.key ?? 'rookie';
+  const levelColors = { rookie: 'text-slate-400', bronze: 'text-orange-400', silver: 'text-slate-300', gold: 'text-yellow-400', platinum: 'text-cyan-400' };
 
   return (
     <div className="space-y-6">
@@ -275,6 +236,36 @@ export default function Dashboard({ openChatWithPrompt, navigate, profile }) {
         <p className="mt-2 text-lg text-slate-400">Чем я могу помочь сегодня?</p>
       </div>
 
+      {/* Мини-статистика геймификации */}
+      {gameStats && (
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Card>
+            <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Уровень</p>
+            <div className="mt-2 flex items-center gap-2">
+              <Trophy size={18} className={levelColors[levelKey]} />
+              <p className={`text-xl font-bold ${levelColors[levelKey]}`}>{gameStats.level.label}</p>
+            </div>
+            <p className="mt-1 text-sm text-slate-400">{gameStats.points_total} очков</p>
+          </Card>
+          <Card>
+            <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Серия</p>
+            <div className="mt-2 flex items-center gap-2">
+              <Flame size={18} className={gameStats.streak_days > 0 ? 'text-orange-400' : 'text-slate-600'} />
+              <p className="text-xl font-bold text-white">{gameStats.streak_days}</p>
+            </div>
+            <p className="mt-1 text-sm text-slate-400">
+              {gameStats.streak_days > 0 ? 'дней подряд' : 'начни серию сегодня'}
+            </p>
+          </Card>
+          <Card>
+            <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Месяц</p>
+            <p className="mt-2 text-xl font-bold text-white">{gameStats.month_earned} / {gameStats.month_max}</p>
+            <p className="mt-1 text-sm text-slate-400">очков в этом месяце</p>
+          </Card>
+        </div>
+      )}
+
+      {/* Рабочий день */}
       <div ref={workdayRef} className="scroll-mt-24">
         <Card>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -282,39 +273,35 @@ export default function Dashboard({ openChatWithPrompt, navigate, profile }) {
               <h2 className="text-xl font-bold text-white">Рабочий день</h2>
               <div className="mt-3 flex flex-wrap gap-3 text-sm font-semibold text-slate-400">
                 <span className="inline-flex items-center gap-2 rounded-full bg-slate-950/45 px-3 py-1 ring-1 ring-slate-700">
-                  <Clock3 size={16} />
-                  Сегодня начало работы в 09:00
+                  <Clock3 size={16} />Сегодня начало работы в 09:00
                 </span>
                 <span className="inline-flex items-center gap-2 rounded-full bg-slate-950/45 px-3 py-1 ring-1 ring-slate-700">
-                  <Check size={16} />
-                  Окончание рабочего дня: 18:00
+                  <Check size={16} />Окончание рабочего дня: 18:00
                 </span>
               </div>
             </div>
+
             <div className="relative">
               <button
                 type="button"
-                onClick={() => availableStatusOptions.length > 0 && setStatusOpen((current) => !current)}
+                onClick={() => availableStatuses.length > 0 && setStatusOpen((v) => !v)}
                 className={`inline-flex items-center gap-2 rounded-2xl bg-slate-950/45 px-4 py-3 text-sm font-semibold text-slate-200 ring-1 ring-slate-700 transition ${
-                  availableStatusOptions.length === 0 ? 'cursor-default' : 'hover:bg-purple-950/25'
+                  availableStatuses.length === 0 ? 'cursor-default' : 'hover:bg-purple-950/25'
                 }`}
               >
                 <span className={`h-2.5 w-2.5 rounded-full ${statusOptions[status].dot}`} />
                 {statusOptions[status].label}
-                {availableStatusOptions.length > 0 && <ChevronDown size={16} />}
+                {availableStatuses.length > 0 && <ChevronDown size={16} />}
               </button>
-
-              {statusOpen && availableStatusOptions.length > 0 && (
-                <div className="absolute right-0 z-30 mt-2 w-44 rounded-2xl border border-slate-700 bg-slate-950/95 p-2 shadow-[0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur-xl">
-                  {availableStatusOptions.map((item) => (
-                    <button
-                      key={item}
-                      type="button"
-                      onClick={() => selectStatus(item)}
-                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-200 transition hover:bg-purple-950/30"
+              {statusOpen && availableStatuses.length > 0 && (
+                <div className="absolute right-0 z-30 mt-2 w-44 rounded-2xl border border-slate-700 bg-slate-950/95 p-2 shadow-lg backdrop-blur-xl">
+                  {availableStatuses.map((s) => (
+                    <button key={s} type="button"
+                      onClick={() => { setStatus(s); setStatusOpen(false); }}
+                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-200 hover:bg-purple-950/30"
                     >
-                      <span className={`h-2.5 w-2.5 rounded-full ${statusOptions[item].dot}`} />
-                      {statusOptions[item].label}
+                      <span className={`h-2.5 w-2.5 rounded-full ${statusOptions[s].dot}`} />
+                      {statusOptions[s].label}
                     </button>
                   ))}
                 </div>
@@ -322,70 +309,143 @@ export default function Dashboard({ openChatWithPrompt, navigate, profile }) {
             </div>
           </div>
 
-          {!dayStarted && (
+          {/* Не начат — кнопка старта */}
+          {!dayStarted && !selectMode && (
             <Button className="mt-5 w-full sm:w-auto" onClick={startDay}>
               Начать рабочий день
             </Button>
           )}
 
-          {dayStarted && !isDayDone && (
-            <>
-              <div className="mt-5 grid gap-3">
-                {tasks.map((task) => (
-                  <button
-                    key={task.id}
-                    type="button"
-                    disabled={isDayDone}
-                    onClick={() => toggleTask(task.id)}
-                    className={`flex items-center gap-3 rounded-3xl border p-4 text-left transition ${
-                      task.done
-                        ? 'border-purple-400/50 bg-purple-600/15 text-slate-300'
-                        : 'border-slate-700 bg-slate-950/45 text-slate-200 hover:border-purple-500/50 hover:bg-purple-950/25'
-                    } ${isDayDone ? 'cursor-default opacity-80' : ''}`}
-                  >
-                    <span
-                      className={`grid h-6 w-6 shrink-0 place-items-center rounded-lg border transition ${
-                        task.done
-                          ? 'border-purple-400 bg-purple-600 text-white'
-                          : 'border-slate-600 bg-slate-950/60 text-transparent'
-                      }`}
-                    >
-                      <Check size={16} />
-                    </span>
-                    <span className={task.done ? 'line-through decoration-purple-300/70' : ''}>
-                      {task.text}
-                    </span>
-                  </button>
-                ))}
+          {/* Режим выбора задач */}
+          {selectMode && (
+            <div className="mt-5">
+              <div className="mb-4 flex items-center justify-between gap-4">
+                <h3 className="font-semibold text-white">Выберите задачи на сегодня</h3>
+                <button type="button" onClick={askTechna}
+                  className="inline-flex items-center gap-2 rounded-2xl bg-purple-600/15 px-3 py-2 text-sm font-semibold text-purple-200 ring-1 ring-purple-400/30 transition hover:bg-purple-600/25">
+                  <Sparkles size={15} />Техна посоветует
+                </button>
               </div>
-
-              <Button className="mt-5 w-full sm:w-auto" onClick={finishDay}>
-                Завершить рабочий день
-              </Button>
-            </>
-          )}
-
-          {isDayDone && allTasksDone && (
-            <div className="mt-5 rounded-3xl border border-purple-400/30 bg-purple-600/10 p-5 text-slate-200">
-              <p className="mb-2 text-lg font-bold text-white">Рабочий день завершён</p>
-              <p className="text-lg font-bold text-white">Все задачи выполнены. Хорошего отдыха, ты молодец!</p>
-              <p className="mt-2 text-sm font-semibold text-slate-400">
-                Выполнено {completedTasksCount} из {tasks.length}
-              </p>
-              <Button variant="secondary" className="mt-5 w-full sm:w-auto" onClick={startNewDay}>
-                Начать новый день
-              </Button>
+              {goalsLoading ? (
+                <p className="text-sm text-slate-500">Загрузка целей...</p>
+              ) : monthGoals.length === 0 ? (
+                <p className="text-sm text-slate-500">Руководитель ещё не назначил цели на этот месяц.</p>
+              ) : (
+                <div className="grid gap-3">
+                  {monthGoals.map((g) => {
+                    const checked = selectedIds.has(g.id);
+                    return (
+                      <button key={g.id} type="button"
+                        onClick={() => setSelectedIds((prev) => {
+                          const n = new Set(prev);
+                          checked ? n.delete(g.id) : n.add(g.id);
+                          return n;
+                        })}
+                        className={`flex items-center gap-3 rounded-3xl border p-4 text-left transition ${
+                          checked
+                            ? 'border-purple-400/50 bg-purple-600/15 text-slate-200'
+                            : 'border-slate-700 bg-slate-950/45 text-slate-300 hover:border-purple-500/40'
+                        }`}
+                      >
+                        <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-lg border transition ${
+                          checked ? 'border-purple-400 bg-purple-600 text-white' : 'border-slate-600 bg-slate-950/60 text-transparent'
+                        }`}>
+                          <Check size={14} />
+                        </span>
+                        <span className="min-w-0 flex-1 font-semibold">{g.title}</span>
+                        <span className="shrink-0 rounded-xl bg-slate-800 px-2 py-1 text-xs font-bold text-purple-300">
+                          {g.points} pts
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              <div className="mt-5 flex gap-3">
+                <Button onClick={confirmTaskSelection} disabled={selectedIds.size === 0}>
+                  Начать день ({selectedIds.size} задач)
+                </Button>
+                <Button variant="secondary" onClick={() => setSelectMode(false)}>Отмена</Button>
+              </div>
             </div>
           )}
 
-          {isDayDone && !allTasksDone && (
-            <div className="mt-5 rounded-3xl border border-slate-700 bg-slate-950/45 p-5">
-              <p className="mb-2 text-lg font-bold text-white">Рабочий день завершён</p>
-              <p className="text-lg font-bold text-white">Комментарий отправлен руководителю</p>
-              <p className="mt-2 text-sm font-semibold text-slate-400">
-                Выполнено {completedTasksCount} из {tasks.length}
-              </p>
-              {reason && <p className="mt-3 text-slate-400">{reason}</p>}
+          {/* День начат — список задач */}
+          {dayStarted && !dayCompleted && !selectMode && (
+            <>
+              {dailyTasks.length === 0 ? (
+                <p className="mt-5 text-sm text-slate-500">Задачи на сегодня не выбраны.</p>
+              ) : (
+                <div className="mt-5 grid gap-3">
+                  {dailyTasks.map((task) => (
+                    <button key={task.id} type="button"
+                      onClick={() => toggleTask(task.id)}
+                      disabled={!!task.completed}
+                      className={`flex items-center gap-3 rounded-3xl border p-4 text-left transition ${
+                        task.completed
+                          ? 'border-purple-400/50 bg-purple-600/15 text-slate-300 cursor-default'
+                          : 'border-slate-700 bg-slate-950/45 text-slate-200 hover:border-purple-500/50 hover:bg-purple-950/25'
+                      }`}
+                    >
+                      <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-lg border transition ${
+                        task.completed
+                          ? 'border-purple-400 bg-purple-600 text-white'
+                          : 'border-slate-600 bg-slate-950/60 text-transparent'
+                      }`}>
+                        <Check size={16} />
+                      </span>
+                      <span className={`min-w-0 flex-1 font-semibold ${task.completed ? 'line-through decoration-purple-300/70' : ''}`}>
+                        {task.title}
+                      </span>
+                      <span className="shrink-0 rounded-xl bg-slate-800 px-2 py-1 text-xs font-bold text-purple-300">
+                        {task.points} pts
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="mt-5 flex flex-wrap items-center gap-3">
+                <Button onClick={handleFinishDay}>Завершить рабочий день</Button>
+                {dailyTasks.length > 0 && (
+                  <p className="text-sm text-slate-500">
+                    {completedCount} / {dailyTasks.length} выполнено
+                  </p>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* День завершён */}
+          {dayCompleted && (
+            <div className={`mt-5 rounded-3xl border p-5 ${
+              allDone || dayResult?.bonus
+                ? 'border-purple-400/30 bg-purple-600/10'
+                : 'border-slate-700 bg-slate-950/45'
+            }`}>
+              <p className="text-lg font-bold text-white">Рабочий день завершён</p>
+              {dayResult ? (
+                <div className="mt-3 space-y-2">
+                  <p className="font-semibold text-slate-200">
+                    Выполнено {completedCount} из {dailyTasks.length} задач
+                    {dayResult.completion_rate !== undefined && ` (${dayResult.completion_rate}%)`}
+                  </p>
+                  {dayResult.bonus && (
+                    <div className="flex items-center gap-2 text-yellow-300">
+                      <Trophy size={16} />
+                      <span className="font-bold">Бонус ×1.5 — все задачи выполнены! +{dayResult.points_earned} pts</span>
+                    </div>
+                  )}
+                  {!dayResult.bonus && !dayResult.penalty && dayResult.points_earned > 0 && (
+                    <p className="text-purple-200">+{dayResult.points_earned} pts заработано</p>
+                  )}
+                  {dayResult.penalty && (
+                    <p className="text-red-300">Штраф применён — выполнено менее 60% задач. +{dayResult.points_earned} pts</p>
+                  )}
+                  <p className="text-sm text-slate-400">Всего очков: {dayResult.total}</p>
+                </div>
+              ) : (
+                <p className="mt-2 text-sm text-slate-400">Выполнено {completedCount} из {dailyTasks.length}</p>
+              )}
               <Button variant="secondary" className="mt-5 w-full sm:w-auto" onClick={startNewDay}>
                 Начать новый день
               </Button>
@@ -394,90 +454,21 @@ export default function Dashboard({ openChatWithPrompt, navigate, profile }) {
         </Card>
       </div>
 
+      {/* Последний отчёт */}
       {dailyReports.length > 0 && (
         <Card>
-          <div>
-            <h2 className="text-xl font-bold text-white">Отчёт за день</h2>
-            <p className="mt-2 text-slate-400">Итоги последнего завершенного рабочего дня</p>
-          </div>
-
+          <h2 className="text-xl font-bold text-white">Отчёт за день</h2>
+          <p className="mt-2 text-slate-400">Итоги последнего завершённого рабочего дня</p>
           <div className="mt-5 rounded-3xl border border-purple-400/30 bg-purple-600/10 p-5">
             <p className="text-sm font-semibold text-slate-500">{dailyReports[0].date}</p>
             <p className="mt-2 text-2xl font-bold text-white">
               Выполнено задач: {dailyReports[0].completed}/{dailyReports[0].total}
             </p>
-            {dailyReports[0].reason && (
-              <p className="mt-3 text-slate-400">{dailyReports[0].reason}</p>
-            )}
           </div>
-
-          {dailyReports.length > 1 && (
-            <div className="mt-5">
-              <h3 className="text-sm font-semibold text-slate-500">История</h3>
-              <div className="mt-3 divide-y divide-slate-800">
-                {dailyReports.slice(1).map((report) => (
-                  <div key={report.id} className="flex items-center justify-between gap-4 py-3">
-                    <span className="font-semibold text-white">{report.date}</span>
-                    <span className="rounded-full bg-slate-950/45 px-3 py-1 text-sm font-semibold text-slate-300 ring-1 ring-slate-700">
-                      {report.completed}/{report.total} задач
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </Card>
       )}
 
-      <Card>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h2 className="text-xl font-bold text-white">Прогресс сотрудника</h2>
-            <p className="mt-2 text-slate-400">За эту неделю</p>
-          </div>
-          <div className="rounded-2xl bg-purple-600/10 px-4 py-3 text-sm font-semibold text-purple-200 ring-1 ring-purple-400/20">
-            {progressText}
-          </div>
-        </div>
-
-        <div className="mt-6">
-          <div className="flex items-center justify-between gap-4 text-sm font-semibold text-slate-400">
-            <span>Прогресс: {progressPercent}%</span>
-            <span>{weekStats.completedTasks} / {weekStats.totalTasks}</span>
-          </div>
-          <div className="mt-3 h-4 overflow-hidden rounded-full bg-slate-950/60 ring-1 ring-slate-700">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-purple-400 to-purple-600 transition-all duration-500"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
-        </div>
-
-        <div className="mt-5 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-3xl border border-slate-700 bg-slate-950/45 p-4">
-            <p className="text-sm font-semibold text-slate-500">Выполнено задач</p>
-            <p className="mt-2 text-2xl font-bold text-white">
-              {weekStats.completedTasks} из {weekStats.totalTasks}
-            </p>
-          </div>
-          <div className="rounded-3xl border border-slate-700 bg-slate-950/45 p-4">
-            <p className="text-sm font-semibold text-slate-500">Завершено дней</p>
-            <p className="mt-2 text-2xl font-bold text-white">
-              {weekStats.completedDays} из {weekStats.totalDays}
-            </p>
-          </div>
-          <div className="rounded-3xl border border-slate-700 bg-slate-950/45 p-4">
-            <p className="text-sm font-semibold text-slate-500">Среднее задач в день</p>
-            <p className="mt-2 text-2xl font-bold text-white">{averageTasksPerDay}</p>
-          </div>
-        </div>
-
-        <div className="mt-3 rounded-3xl border border-slate-700 bg-slate-950/45 p-4">
-          <p className="text-sm font-semibold text-slate-500">Самый продуктивный день</p>
-          <p className="mt-2 text-lg font-bold text-white">Понедельник</p>
-        </div>
-      </Card>
-
+      {/* Техна рекомендует */}
       <Card>
         <div>
           <h2 className="text-xl font-bold text-white">Техна рекомендует</h2>
@@ -485,25 +476,20 @@ export default function Dashboard({ openChatWithPrompt, navigate, profile }) {
         </div>
         <div className="mt-5 divide-y divide-slate-800">
           {technaRecommendations.map((item, index) => {
-            const Icon = getRecommendationIcon(item.type);
+            const icons = { vacation: CalendarDays, tasks: ClipboardList, salary: WalletCards };
+            const Icon = icons[item.type];
             const isFeatured = index === 0 && !item.completed;
-
             return (
-              <div
-                key={item.id}
-                className={`flex w-full items-center gap-4 py-4 transition ${
-                  isFeatured ? 'rounded-3xl border border-purple-400/30 bg-purple-600/10 px-4' : ''
-                } ${item.completed ? 'opacity-70' : ''}`}
-              >
+              <div key={item.id} className={`flex w-full items-center gap-4 py-4 transition ${
+                isFeatured ? 'rounded-3xl border border-purple-400/30 bg-purple-600/10 px-4' : ''
+              } ${item.completed ? 'opacity-70' : ''}`}>
                 <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-purple-500/10 text-purple-300 ring-1 ring-purple-400/20">
                   {item.completed ? <Check size={22} /> : <Icon size={22} />}
                 </span>
-                <button
-                  onClick={() => handleRecommendationClick(item)}
+                <button onClick={() => handleRecommendationClick(item)}
                   className={`min-w-0 flex-1 text-left font-semibold transition hover:text-purple-200 ${
                     item.completed ? 'text-slate-400 line-through decoration-purple-300/70' : 'text-white'
-                  }`}
-                >
+                  }`}>
                   {item.text}
                 </button>
                 {item.completed ? (
@@ -511,13 +497,9 @@ export default function Dashboard({ openChatWithPrompt, navigate, profile }) {
                     ✔ Выполнено
                   </span>
                 ) : (
-                  <Button
-                    variant="secondary"
-                    className="shrink-0 px-4 py-2"
-                    onClick={() => handleRecommendationClick(item)}
-                  >
-                    Перейти
-                    <ChevronRight size={16} />
+                  <Button variant="secondary" className="shrink-0 px-4 py-2"
+                    onClick={() => handleRecommendationClick(item)}>
+                    Перейти <ChevronRight size={16} />
                   </Button>
                 )}
               </div>
@@ -526,26 +508,26 @@ export default function Dashboard({ openChatWithPrompt, navigate, profile }) {
         </div>
       </Card>
 
+      {/* Модалка незавершённого дня */}
       {showModal && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/75 px-4 backdrop-blur-sm">
           <Card className="w-full max-w-xl">
             <h2 className="text-2xl font-bold text-white">Вы не выполнили все задачи</h2>
+            <p className="mt-2 text-sm text-slate-400">
+              Выполнено {completedCount} из {dailyTasks.length}.
+              {completedCount / dailyTasks.length < 0.6
+                ? ' Выполнено менее 60% — будет применён штраф к очкам.'
+                : ' Вы заработаете очки только за выполненные задачи.'}
+            </p>
             <label className="mt-6 block">
-              <span className="text-sm font-semibold text-slate-400">Комментарий</span>
-              <textarea
-                value={reasonDraft}
-                onChange={(event) => setReasonDraft(event.target.value)}
+              <span className="text-sm font-semibold text-slate-400">Комментарий руководителю</span>
+              <textarea value={reasonDraft} onChange={(e) => setReasonDraft(e.target.value)}
                 placeholder="Напишите причину, почему не успели"
-                className="mt-2 min-h-32 w-full resize-none rounded-2xl border border-slate-700 bg-slate-950/70 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-purple-500"
-              />
+                className="mt-2 min-h-28 w-full resize-none rounded-2xl border border-slate-700 bg-slate-950/70 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-purple-500" />
             </label>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <Button variant="secondary" className="flex-1" onClick={() => setShowModal(false)}>
-                Отмена
-              </Button>
-              <Button className="flex-1" onClick={finishDayWithReason}>
-                Завершить с комментарием
-              </Button>
+              <Button variant="secondary" className="flex-1" onClick={() => setShowModal(false)}>Отмена</Button>
+              <Button className="flex-1" onClick={doFinish}>Завершить</Button>
             </div>
           </Card>
         </div>

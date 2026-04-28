@@ -5,6 +5,7 @@ import {
   Home,
   MessageCircle,
   CircleHelp,
+  Target,
   UserRound,
   WalletCards,
 } from 'lucide-react';
@@ -12,6 +13,7 @@ import {
 // ── Боковая навигация (статичная UI-структура) ────────────────────────────
 export const navItems = [
   { id: 'dashboard', label: 'Главная',    icon: Home },
+  { id: 'goals',     label: 'Цели',       icon: Target },
   { id: 'chat',      label: 'Чат',        icon: MessageCircle },
   { id: 'questions', label: 'Вопросы',    icon: CircleHelp },
   { id: 'vacation',  label: 'Отпуск',     icon: CalendarDays },
