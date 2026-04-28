@@ -907,7 +907,7 @@ async def suggest_points(
         import json, re
         from langchain_core.messages import HumanMessage as LCHuman
         from langchain_ollama import ChatOllama
-        llm = ChatOllama(base_url="http://168.222.142.182:11434", model="qwen2.5-coder:7b",
+        llm = ChatOllama(base_url="http://168.222.142.182:11434", model="llama3.1:8b",
                          temperature=0.1, num_predict=300, timeout=60)
         response = await llm.ainvoke([LCHuman(content=prompt)])
         match = re.search(r'\[.*?\]', response.content, re.DOTALL)
@@ -1148,6 +1148,6 @@ def health():
     """Проверка работоспособности сервера и подключения к модели."""
     return {
         "status": "ok",
-        "model":  "qwen2.5-coder:7b",
+        "model":  "llama3.1:8b",
         "ollama": "http://168.222.142.182:11434",
     }
