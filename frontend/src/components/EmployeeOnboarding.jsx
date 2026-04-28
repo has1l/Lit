@@ -27,12 +27,6 @@ const STEPS = [
     text: 'Здесь можно спросить про отпуск, зарплату, документы или правила компании.',
   },
   {
-    page: 'questions',
-    target: 'employee-nav-questions',
-    title: 'Вопросы',
-    text: 'Быстрые ответы и популярные HR-темы без необходимости искать документ вручную.',
-  },
-  {
     page: 'vacation',
     target: 'employee-nav-vacation',
     title: 'Отпуск',

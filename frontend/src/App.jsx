@@ -10,7 +10,6 @@ import Documents from './pages/Documents.jsx';
 import Goals from './pages/Goals.jsx';
 import ManagerDashboard from './pages/ManagerDashboard.jsx';
 import Profile from './pages/Profile.jsx';
-import Questions from './pages/Questions.jsx';
 import Salary from './pages/Salary.jsx';
 import Vacation from './pages/Vacation.jsx';
 import { useAuth } from './store/AuthContext.jsx';
@@ -79,7 +78,6 @@ function Workspace({ authUser, theme, setTheme }) {
   const employeePages = {
     dashboard: <Dashboard openChatWithPrompt={openChatWithPrompt} navigate={setActivePage} profile={profile} />,
     goals:     <Goals />,
-    questions: <Questions openChatWithPrompt={openChatWithPrompt} />,
     chat: (
       <Chat
         draftPrompt={draftPrompt}

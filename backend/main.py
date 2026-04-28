@@ -19,6 +19,8 @@ from pathlib import Path
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from agent import run_agent
@@ -1151,3 +1153,21 @@ def health():
         "model":  "llama3.1:8b",
         "ollama": "http://168.222.142.182:11434",
     }
+
+
+# ── Фронтенд (SPA) ────────────────────────────────────────────────────────────
+# Монтируем после всех API-роутов чтобы не перехватить /auth, /chat и т.д.
+
+_DIST = Path(__file__).parent / "dist"
+
+if _DIST.exists():
+    app.mount("/assets", StaticFiles(directory=str(_DIST / "assets")), name="assets")
+
+    @app.get("/", include_in_schema=False)
+    def spa_root():
+        return FileResponse(str(_DIST / "index.html"))
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    def spa_fallback(full_path: str):
+        """Все неизвестные пути отдают index.html — нужно для React Router."""
+        return FileResponse(str(_DIST / "index.html"))

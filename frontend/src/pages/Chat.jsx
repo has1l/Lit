@@ -102,20 +102,42 @@ export default function Chat({
 
   function startListening() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) return;
+    if (!SR) {
+      alert('Голосовой ввод не поддерживается в вашем браузере.');
+      return;
+    }
     const r = new SR();
     r.lang = 'ru-RU';
     r.interimResults = true;
     r.continuous = false;
+
+    // Запоминаем текущий текст до начала записи
+    const initialText = aiText;
+
     r.onresult = (e) => {
       const transcript = Array.from(e.results).map((res) => res[0].transcript).join('');
-      setAiText(transcript);
+      // Добавляем новый текст к тому, что уже было
+      setAiText(initialText ? `${initialText} ${transcript}` : transcript);
     };
-    r.onerror = () => setIsListening(false);
-    r.onend   = () => setIsListening(false);
-    r.start();
-    recognitionRef.current = r;
-    setIsListening(true);
+    r.onerror = (e) => {
+      console.error('Speech error:', e.error);
+      setIsListening(false);
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+        alert('Голосовой ввод заблокирован. Разрешите доступ к микрофону. Обратите внимание: в некоторых браузерах (Chrome) микрофон работает только по защищенному протоколу HTTPS или на localhost.');
+      } else {
+        alert(`Ошибка голосового ввода: ${e.error}`);
+      }
+    };
+    r.onend = () => setIsListening(false);
+    
+    try {
+      r.start();
+      recognitionRef.current = r;
+      setIsListening(true);
+    } catch (err) {
+      console.error('Failed to start speech recognition:', err);
+      setIsListening(false);
+    }
   }
 
   function stopListening() {
