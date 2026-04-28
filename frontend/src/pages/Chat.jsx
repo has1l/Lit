@@ -98,8 +98,12 @@ export default function Chat({
   const listRef        = useRef(null);
   const peerListRef    = useRef(null);
   const recognitionRef = useRef(null);
+  const isListeningRef = useRef(false);
   const [isListening,  setIsListening]  = useState(false);
   const hasSpeech = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+
+
+  const baseTextRef = useRef(''); // текст ДО начала записи
 
   function startListening() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -107,33 +111,74 @@ export default function Chat({
       alert('Голосовой ввод не поддерживается в вашем браузере.');
       return;
     }
+
+    // Сохраняем текущий текст как базу
+    baseTextRef.current = aiText;
+
     const r = new SR();
     r.lang = 'ru-RU';
     r.interimResults = true;
-    r.continuous = false;
+    r.continuous = true;   // продолжаем слушать пока пользователь не нажмёт стоп
+    r.maxAlternatives = 1;
 
-    // Запоминаем текущий текст до начала записи
-    const initialText = aiText;
+    r.onstart  = () => console.log('[SR] onstart — микрофон активен');
+    r.onaudiostart = () => console.log('[SR] onaudiostart — аудио захвачено');
+    r.onspeechstart = () => console.log('[SR] onspeechstart — речь обнаружена');
+    r.onspeechend = () => console.log('[SR] onspeechend — речь закончилась');
+    r.onaudioend  = () => console.log('[SR] onaudioend — аудио остановлено');
 
     r.onresult = (e) => {
-      const transcript = Array.from(e.results).map((res) => res[0].transcript).join('');
-      // Добавляем новый текст к тому, что уже было
-      setAiText(initialText ? `${initialText} ${transcript}` : transcript);
+      console.log('[SR] onresult — событие:', e.resultIndex, e.results.length);
+      let interimTranscript = '';
+      let finalTranscript = '';
+
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const result = e.results[i];
+        if (!result || !result[0]) { console.log('[SR] пустой result на', i); continue; }
+        const t = result[0].transcript;
+        console.log('[SR] result[' + i + ']:', t, 'isFinal:', result.isFinal);
+        if (result.isFinal) {
+          finalTranscript += t;
+        } else {
+          interimTranscript += t;
+        }
+      }
+
+      if (finalTranscript) {
+        const sep = baseTextRef.current ? ' ' : '';
+        baseTextRef.current = baseTextRef.current + sep + finalTranscript;
+      }
+
+      const display = baseTextRef.current + (interimTranscript ? ` ${interimTranscript}` : '');
+      setAiText(display.trim());
     };
+
+
     r.onerror = (e) => {
       console.error('Speech error:', e.error);
       setIsListening(false);
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-        alert('Голосовой ввод заблокирован. Разрешите доступ к микрофону. Обратите внимание: в некоторых браузерах (Chrome) микрофон работает только по защищенному протоколу HTTPS или на localhost.');
-      } else {
+        alert('Голосовой ввод заблокирован. Разрешите доступ к микрофону.');
+      } else if (e.error === 'network') {
+        alert('Ошибка сети: браузер не может связаться с сервером распознавания речи. Проверьте интернет-соединение.');
+      } else if (e.error !== 'aborted') {
         alert(`Ошибка голосового ввода: ${e.error}`);
       }
     };
-    r.onend = () => setIsListening(false);
-    
+
+    r.onend = () => {
+      // При continuous=true перезапускаем, если пользователь ещё не остановил
+      if (recognitionRef.current === r && isListeningRef.current) {
+        try { r.start(); } catch {}
+      } else {
+        setIsListening(false);
+      }
+    };
+
     try {
       r.start();
       recognitionRef.current = r;
+      isListeningRef.current = true;
       setIsListening(true);
     } catch (err) {
       console.error('Failed to start speech recognition:', err);
@@ -142,9 +187,12 @@ export default function Chat({
   }
 
   function stopListening() {
+    isListeningRef.current = false;
     recognitionRef.current?.stop();
+    recognitionRef.current = null;
     setIsListening(false);
   }
+
 
   // Загрузка контактов + поллинг (5 с) для обновления превью и непрочитанных
   useEffect(() => {
@@ -567,7 +615,17 @@ export default function Chat({
                       </div>
                       <ul className="space-y-1 text-sm text-slate-200">
                         {message.sources.map((src, i) => (
-                          <li key={i} className="leading-snug">{src}</li>
+                          <li key={i} className="leading-snug">
+                            {message.doc_id ? (
+                              <button
+                                type="button"
+                                className="text-left underline decoration-dotted underline-offset-2 hover:text-purple-300 transition-colors"
+                                onClick={() => openDocumentFile(message.doc_id).catch(() => openSection('documents'))}
+                              >
+                                {src}
+                              </button>
+                            ) : src}
+                          </li>
                         ))}
                       </ul>
                     </div>
