@@ -37,6 +37,7 @@ export default function Questions({ openChatWithPrompt }) {
   return (
     <div className="space-y-6">
       <div>
+        <p className="page-eyebrow">База знаний</p>
         <h1 className="text-3xl font-bold tracking-tight text-white">Вопросы</h1>
         <p className="mt-2 text-slate-400">Быстрые ответы Техны по частым HR-сценариям.</p>
       </div>
@@ -45,7 +46,7 @@ export default function Questions({ openChatWithPrompt }) {
         <Card>
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-xl font-bold text-white">Быстрые вопросы</h2>
-            <span className="rounded-full bg-purple-500/10 px-3 py-1 text-xs font-semibold text-purple-200 ring-1 ring-purple-400/20">
+            <span className="status-chip rounded-full px-3 py-1 text-xs font-semibold">
               Ответы из базы знаний
             </span>
           </div>
@@ -58,10 +59,10 @@ export default function Questions({ openChatWithPrompt }) {
                 <button
                   key={item.label}
                   onClick={() => setSelected(item)}
-                  className={`flex min-h-28 flex-col items-center justify-center gap-3 rounded-3xl border p-4 text-center font-semibold transition ${
+                  className={`flex min-h-28 flex-col items-center justify-center gap-3 rounded-2xl border p-4 text-center font-semibold transition ${
                     isActive
-                      ? 'border-purple-400/60 bg-purple-600/20 text-white shadow-lg shadow-purple-950/20'
-                      : 'border-slate-700 bg-slate-950/45 text-slate-300 hover:border-purple-500/50 hover:bg-purple-950/35 hover:text-white'
+                      ? 'border-indigo-500/60 bg-indigo-500/15 text-white'
+                      : 'data-row text-slate-300'
                   }`}
                 >
                   <Icon size={28} />
@@ -71,8 +72,8 @@ export default function Questions({ openChatWithPrompt }) {
             })}
           </div>
 
-          <div className="mt-5 rounded-3xl border border-slate-700 bg-slate-950/45 p-5">
-            <p className="text-sm font-semibold text-purple-200">{selected.prompt}</p>
+          <div className="fintech-control mt-5 rounded-2xl p-5">
+            <p className="text-sm font-semibold text-white">{selected.prompt}</p>
             <p className="mt-3 leading-6 text-slate-400">
               Техна ответит точно — с учётом ваших данных из системы и актуальных регламентов компании.
             </p>
@@ -99,7 +100,7 @@ export default function Questions({ openChatWithPrompt }) {
                   onClick={() => openChatWithPrompt(item.prompt)}
                   className="flex w-full items-center gap-4 py-4 text-left"
                 >
-                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-slate-950/60 text-purple-300 ring-1 ring-slate-700">
+                  <span className="icon-tile h-11 w-11 shrink-0 rounded-2xl">
                     <Icon size={22} />
                   </span>
                   <span className="min-w-0 flex-1">

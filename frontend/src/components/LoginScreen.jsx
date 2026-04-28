@@ -33,7 +33,7 @@ export default function LoginScreen() {
     <div className="flex min-h-screen items-center justify-center px-4 py-10">
       <div className="grid w-full max-w-5xl gap-8 lg:grid-cols-[1.1fr_1fr]">
         {/* Левая колонка — бренд + сторителлинг */}
-        <div className="hidden flex-col justify-between gap-10 rounded-[36px] border border-slate-800 bg-slate-950/55 p-10 backdrop-blur-xl lg:flex">
+        <div className="fintech-surface hidden flex-col justify-between gap-10 rounded-[28px] p-10 lg:flex">
           <div className="flex items-center gap-3">
             <Mascot state="idle" size="lg" />
             <div>
@@ -58,7 +58,7 @@ export default function LoginScreen() {
           </div>
 
           <div className="grid gap-3 text-sm text-slate-300">
-            <div className="flex items-start gap-3 rounded-2xl border border-slate-800 bg-slate-950/60 p-3">
+            <div className="fintech-control flex items-start gap-3 rounded-2xl p-3">
               <ShieldCheck size={18} className="mt-0.5 text-purple-400" />
               <span>Ваши данные не покидают периметр компании. Запросы обрабатываются on-prem.</span>
             </div>
@@ -89,7 +89,7 @@ export default function LoginScreen() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={isSubmitting}
-                className="mt-2 w-full rounded-2xl border border-slate-700 bg-slate-950/70 px-4 py-3 text-white outline-none transition focus:border-purple-500"
+                className="fintech-input mt-2 w-full rounded-2xl px-4 py-3 outline-none transition"
                 placeholder="user@portal-test.1221systems.ru"
               />
             </label>
@@ -102,7 +102,7 @@ export default function LoginScreen() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={isSubmitting}
-                className="mt-2 w-full rounded-2xl border border-slate-700 bg-slate-950/70 px-4 py-3 text-white outline-none transition focus:border-purple-500"
+                className="fintech-input mt-2 w-full rounded-2xl px-4 py-3 outline-none transition"
                 placeholder="••••••••"
               />
             </label>
@@ -118,7 +118,7 @@ export default function LoginScreen() {
             </Button>
           </form>
 
-          <div className="rounded-3xl border border-slate-800 bg-slate-950/45 p-4">
+          <div className="fintech-control rounded-2xl p-4">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               Демо-аккаунты для хакатона
             </p>
@@ -134,7 +134,7 @@ export default function LoginScreen() {
                   className={`flex items-center justify-between gap-3 rounded-2xl border px-3 py-2 text-left text-sm transition ${
                     email === account.email
                       ? 'border-purple-500/60 bg-purple-600/10'
-                      : 'border-slate-700 bg-slate-950/60 hover:border-purple-500/40 hover:bg-purple-950/20'
+                      : 'data-row'
                   }`}
                 >
                   <div className="min-w-0">

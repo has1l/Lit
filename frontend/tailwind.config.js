@@ -8,17 +8,17 @@ export default {
       },
       colors: {
         brand: {
-          bg:           '#08080C',
-          surface:      '#121218',
-          elevated:     '#1A1A24',
+          bg:           '#070914',
+          surface:      '#0C111F',
+          elevated:     '#111827',
           light:        '#F8F8FA',
-          accent:       '#8A2BE2',
-          'accent-soft':'rgba(138, 43, 226, 0.16)',
-          'accent-dim': '#7000FF',
-          danger:       '#DC143C',
-          warning:      '#F4A82F',
-          text:         '#E1E4E6',
-          'text-muted': '#8A98A8',
+          accent:       '#4F46E5',
+          'accent-soft':'rgba(79, 70, 229, 0.14)',
+          'accent-dim': '#3730A3',
+          danger:       '#EF4444',
+          warning:      '#F59E0B',
+          text:         '#E5EAF3',
+          'text-muted': '#96A3B8',
         },
         slate: {
           50:  '#F4F5F0',
@@ -33,7 +33,7 @@ export default {
           900: '#121218',
           950: '#08080C',
         },
-        // We redefine "green" to "purple" here to instantly theme the whole app without changing hundreds of class names
+        // Legacy green classes are mapped to the new fintech violet scale.
         green: {
           50:  '#F3E8FF',
           100: '#E9D5FF',
@@ -51,13 +51,13 @@ export default {
       boxShadow: {
         soft:    '0 18px 45px rgba(0, 0, 0, 0.45)',
         card:    '0 10px 28px rgba(0, 0, 0, 0.4)',
-        glow:    '0 0 32px rgba(138, 43, 226, 0.25)',
-        'inner-brand': 'inset 0 0 0 1px rgba(138, 43, 226, 0.4)',
-        glass:   '0 24px 60px rgba(0,0,0,0.5), inset 0 0 0 0.5px rgba(255,255,255,0.07)',
+        glow:    '0 0 24px rgba(79, 70, 229, 0.18)',
+        'inner-brand': 'inset 0 0 0 1px rgba(79, 70, 229, 0.32)',
+        glass:   '0 18px 44px rgba(0,0,0,0.24), inset 0 0 0 0.5px rgba(255,255,255,0.06)',
       },
       backgroundImage: {
-        'mascot-idle':     'radial-gradient(circle at 30% 30%, #1A1A24 0%, #08080C 60%)',
-        'mascot-thinking': 'conic-gradient(from 180deg at 50% 50%, #08080C 0%, #8A2BE2 25%, #1A1A24 50%, #8A2BE2 75%, #08080C 100%)',
+        'mascot-idle':     'radial-gradient(circle at 30% 30%, #111827 0%, #070914 62%)',
+        'mascot-thinking': 'conic-gradient(from 180deg at 50% 50%, #070914 0%, #4F46E5 25%, #111827 50%, #2563EB 75%, #070914 100%)',
         'mascot-success':  'radial-gradient(circle at 30% 30%, #D8B4FE 0%, #9333EA 60%, #6B21A8 100%)',
         'mascot-empty':    'radial-gradient(circle at 30% 30%, #F4A82F 0%, #3B0764 70%)',
       },

@@ -337,6 +337,7 @@ export default function ManagerDashboard({ onOpenEmployeeChat }) {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
+          <p className="page-eyebrow">Руководитель</p>
           <h1 className="text-3xl font-bold tracking-tight text-white">Команда</h1>
           <p className="mt-2 text-slate-400">Сотрудники, отпуск и контакты.</p>
         </div>
@@ -348,18 +349,18 @@ export default function ManagerDashboard({ onOpenEmployeeChat }) {
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>
-          <p className="text-sm font-semibold text-slate-500">Всего сотрудников</p>
-          <p className="mt-3 text-4xl font-bold text-white">{loading ? '…' : employees.length}</p>
+          <p className="metric-label">Всего сотрудников</p>
+          <p className="metric-value mt-3 text-4xl font-bold">{loading ? '…' : employees.length}</p>
         </Card>
         <Card>
-          <p className="text-sm font-semibold text-slate-500">Мало отпуска (&lt;7 дн.)</p>
-          <p className="mt-3 text-4xl font-bold text-white">
+          <p className="metric-label">Мало отпуска (&lt;7 дн.)</p>
+          <p className="metric-value mt-3 text-4xl font-bold">
             {loading ? '…' : employees.filter((e) => e.vacation_remaining < 7).length}
           </p>
         </Card>
         <Card>
-          <p className="text-sm font-semibold text-slate-500">На согласовании</p>
-          <p className="mt-3 text-4xl font-bold text-white">
+          <p className="metric-label">На согласовании</p>
+          <p className="metric-value mt-3 text-4xl font-bold">
             {loading ? '…' : employees.filter((e) => e.vacation_pending > 0).length}
           </p>
         </Card>
@@ -371,7 +372,7 @@ export default function ManagerDashboard({ onOpenEmployeeChat }) {
             <h2 className="text-xl font-bold text-white">Сотрудники</h2>
             <p className="mt-2 text-slate-400">Отпуск, должность и дата найма.</p>
           </div>
-          <label className="flex min-w-0 items-center gap-2 rounded-2xl border border-slate-700 bg-slate-950/45 px-4 py-3 text-slate-300 xl:w-72">
+          <label className="fintech-input flex min-w-0 items-center gap-2 rounded-2xl px-4 py-3 xl:w-72">
             <Search size={18} />
             <input value={search} onChange={(e) => setSearch(e.target.value)}
               placeholder="Найти сотрудника"
@@ -390,11 +391,13 @@ export default function ManagerDashboard({ onOpenEmployeeChat }) {
             <p className="py-4 text-sm text-slate-500">Сотрудники не найдены</p>
           )}
           {filtered.map((emp) => (
-            <div key={emp.email}
-              className="rounded-3xl border border-slate-700 bg-slate-950/45 p-5 transition hover:border-slate-600">
+            <div
+              key={emp.email}
+              className="data-row rounded-2xl p-5"
+            >
               <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                 <button onClick={() => setSelectedEmployee(emp)} className="flex items-start gap-4 text-left">
-                  <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-purple-500/10 text-purple-300 ring-1 ring-purple-400/20 text-sm font-bold">
+                  <div className="icon-tile h-12 w-12 shrink-0 rounded-2xl text-sm font-bold">
                     {initials(emp.full_name)}
                   </div>
                   <div>
@@ -428,7 +431,7 @@ export default function ManagerDashboard({ onOpenEmployeeChat }) {
         <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/75 px-4 backdrop-blur-sm">
           <Card className="max-h-[90vh] w-full max-w-xl overflow-y-auto">
             <div className="flex items-start gap-4">
-              <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-purple-500/10 text-purple-300 ring-1 ring-purple-400/20 text-base font-bold">
+              <div className="icon-tile h-14 w-14 shrink-0 rounded-2xl text-base font-bold">
                 {initials(selectedEmployee.full_name)}
               </div>
               <div>
@@ -437,16 +440,16 @@ export default function ManagerDashboard({ onOpenEmployeeChat }) {
               </div>
             </div>
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-3xl border border-slate-700 bg-slate-950/45 p-4">
-                <p className="text-sm font-semibold text-slate-500">Email</p>
-                <p className="mt-2 break-all font-bold text-white">{selectedEmployee.email}</p>
+              <div className="metric-card rounded-2xl p-4">
+                <p className="metric-label">Email</p>
+                <p className="metric-value mt-2 break-all font-bold">{selectedEmployee.email}</p>
               </div>
-              <div className="rounded-3xl border border-slate-700 bg-slate-950/45 p-4">
-                <p className="text-sm font-semibold text-slate-500">Дата найма</p>
-                <p className="mt-2 font-bold text-white">{formatHireDate(selectedEmployee.hire_date)}</p>
+              <div className="metric-card rounded-2xl p-4">
+                <p className="metric-label">Дата найма</p>
+                <p className="metric-value mt-2 font-bold">{formatHireDate(selectedEmployee.hire_date)}</p>
               </div>
-              <div className="rounded-3xl border border-slate-700 bg-slate-950/45 p-4">
-                <p className="text-sm font-semibold text-slate-500">Остаток отпуска</p>
+              <div className="metric-card rounded-2xl p-4">
+                <p className="metric-label">Остаток отпуска</p>
                 <p className={`mt-2 text-2xl font-bold ${selectedEmployee.vacation_remaining < 7 ? 'text-yellow-300' : 'text-white'}`}>
                   {pluralDays(selectedEmployee.vacation_remaining)}
                 </p>
@@ -455,9 +458,11 @@ export default function ManagerDashboard({ onOpenEmployeeChat }) {
                 </p>
               </div>
               {selectedEmployee.vacation_pending > 0 && (
-                <div className="rounded-3xl border border-yellow-400/20 bg-yellow-400/5 p-4">
-                  <p className="text-sm font-semibold text-slate-500">На согласовании</p>
-                  <p className="mt-2 text-2xl font-bold text-yellow-300">{pluralDays(selectedEmployee.vacation_pending)}</p>
+                <div className="metric-card rounded-2xl p-4">
+                  <p className="metric-label">На согласовании</p>
+                  <p className="mt-2 text-2xl font-bold text-yellow-300">
+                    {pluralDays(selectedEmployee.vacation_pending)}
+                  </p>
                 </div>
               )}
             </div>

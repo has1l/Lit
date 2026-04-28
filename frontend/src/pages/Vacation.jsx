@@ -18,16 +18,17 @@ export default function Vacation({ openChatWithPrompt }) {
   return (
     <div className="space-y-6">
       <div>
+        <p className="page-eyebrow">HR баланс</p>
         <h1 className="text-3xl font-bold tracking-tight text-white">Отпуск</h1>
         <p className="mt-2 text-slate-400">Баланс дней и история отпусков.</p>
       </div>
 
       <div className="grid gap-5 md:grid-cols-2">
         <Card>
-          <div className="grid h-12 w-12 place-items-center rounded-2xl bg-purple-400/10 text-purple-300">
+          <div className="icon-tile h-12 w-12 rounded-2xl">
             <CalendarDays size={24} />
           </div>
-          <p className="mt-5 text-sm font-medium text-slate-400">Остаток отпуска</p>
+          <p className="metric-label mt-5">Остаток отпуска</p>
           {loading ? (
             <div className="mt-3 flex items-center gap-2 text-slate-500">
               <Loader2 size={20} className="animate-spin" />
@@ -37,7 +38,7 @@ export default function Vacation({ openChatWithPrompt }) {
             <p className="mt-2 text-sm text-red-400">Не удалось загрузить данные</p>
           ) : leave ? (
             <>
-              <p className="mt-1 text-5xl font-bold text-white">{pluralDays(leave.remaining_days)}</p>
+              <p className="metric-value mt-1 text-5xl font-bold">{pluralDays(leave.remaining_days)}</p>
               <p className="mt-2 text-sm text-slate-500">из {leave.total_days} доступных в {leave.year} году</p>
               {leave.pending_days > 0 && (
                 <p className="mt-1 text-sm text-yellow-400">На согласовании: {pluralDays(leave.pending_days)}</p>
@@ -49,7 +50,7 @@ export default function Vacation({ openChatWithPrompt }) {
         </Card>
 
         <Card>
-          <p className="text-sm font-medium text-slate-400">Действия</p>
+          <p className="metric-label">Действия</p>
           <p className="mt-3 text-xl font-bold text-white">Запрос или перенос отпуска</p>
           <p className="mt-2 text-slate-500">Уточните процедуру у Техны или обратитесь в HR.</p>
           <div className="mt-6 flex flex-col gap-3">
@@ -65,7 +66,7 @@ export default function Vacation({ openChatWithPrompt }) {
 
       <Card>
         <div className="flex items-center gap-3">
-          <History className="text-purple-300" size={22} />
+          <History className="text-slate-400" size={22} />
           <h2 className="text-xl font-bold text-white">История по годам</h2>
         </div>
         <div className="mt-5 divide-y divide-slate-800">
@@ -83,7 +84,7 @@ export default function Vacation({ openChatWithPrompt }) {
                   <p className="font-semibold text-white">{row.year} год</p>
                   <p className="mt-1 text-sm text-slate-500">{formatYearHistory(row)}</p>
                 </div>
-                <span className="rounded-full bg-slate-950/60 px-3 py-1 text-sm font-semibold text-slate-300 ring-1 ring-slate-700">
+                <span className="status-chip rounded-full px-3 py-1 text-sm font-semibold">
                   {pluralDays(row.used_days)}
                 </span>
               </div>

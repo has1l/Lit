@@ -36,6 +36,7 @@ export default function Documents() {
   return (
     <div className="space-y-6">
       <div>
+        <p className="page-eyebrow">Документооборот</p>
         <h1 className="text-3xl font-bold tracking-tight text-white">Документы</h1>
         <p className="mt-2 text-slate-400">Справки, договоры и HR-документы в одном месте.</p>
       </div>
@@ -48,7 +49,7 @@ export default function Documents() {
               className="flex w-full items-center justify-between gap-4 p-5 text-left"
             >
               <div className="flex min-w-0 items-center gap-4">
-                <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-purple-500/10 text-purple-300 ring-1 ring-purple-400/20">
+                <div className="icon-tile h-12 w-12 shrink-0 rounded-2xl">
                   <FileText size={24} />
                 </div>
                 <div className="min-w-0">
@@ -57,10 +58,10 @@ export default function Documents() {
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-3">
-                <span className="hidden rounded-full bg-slate-950/60 px-3 py-1 text-sm font-semibold text-slate-300 ring-1 ring-slate-700 sm:inline-flex">
+                <span className="status-chip hidden rounded-full px-3 py-1 text-sm font-semibold sm:inline-flex">
                   {document.status}
                 </span>
-                <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900/70 text-slate-100 ring-1 ring-purple-500/60">
+                <span className="fintech-control inline-flex h-11 w-11 items-center justify-center rounded-2xl text-slate-100">
                   <Download size={18} />
                 </span>
               </div>
@@ -73,7 +74,7 @@ export default function Documents() {
         <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/75 px-4 backdrop-blur-sm">
           <Card className="w-full max-w-lg">
             <div className="flex items-start gap-4">
-              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-purple-500/10 text-purple-300 ring-1 ring-purple-400/20">
+              <div className="icon-tile h-12 w-12 shrink-0 rounded-2xl">
                 <FileText size={24} />
               </div>
               <div className="min-w-0">
@@ -82,14 +83,14 @@ export default function Documents() {
               </div>
             </div>
 
-            <div className="mt-6 grid gap-3 rounded-3xl border border-slate-700 bg-slate-950/45 p-4">
+            <div className="fintech-control mt-6 grid gap-3 rounded-2xl p-4">
               <div className="flex items-center justify-between gap-4">
                 <span className="text-slate-500">Дата</span>
                 <span className="font-semibold text-slate-200">{openedDocument.date}</span>
               </div>
               <div className="flex items-center justify-between gap-4">
                 <span className="text-slate-500">Статус</span>
-                <span className="rounded-full bg-slate-900 px-3 py-1 text-sm font-semibold text-purple-200 ring-1 ring-purple-500/40">
+                <span className="status-chip rounded-full px-3 py-1 text-sm font-semibold">
                   {openedDocument.status}
                 </span>
               </div>

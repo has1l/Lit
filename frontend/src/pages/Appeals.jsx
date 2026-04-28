@@ -34,6 +34,7 @@ export default function Appeals({ appeals, addAppeal, modalOpen, setModalOpen })
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
+          <p className="page-eyebrow">HR service desk</p>
           <h1 className="text-3xl font-bold tracking-tight text-white">Обращения</h1>
           <p className="mt-2 text-slate-400">История HR-запросов и новые обращения.</p>
         </div>
@@ -44,11 +45,11 @@ export default function Appeals({ appeals, addAppeal, modalOpen, setModalOpen })
         {appeals.map((appeal) => (
           <Card key={appeal.id} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-sm font-semibold text-purple-200">{appeal.id}</p>
+              <p className="metric-label">{appeal.id}</p>
               <h2 className="mt-1 text-xl font-bold text-white">{appeal.topic}</h2>
               <p className="mt-1 text-sm text-slate-500">{appeal.category}</p>
             </div>
-            <span className="w-fit rounded-full bg-slate-950/60 px-3 py-1 text-sm font-semibold text-slate-300 ring-1 ring-slate-700">
+            <span className="status-chip w-fit rounded-full px-3 py-1 text-sm font-semibold">
               {appeal.status}
             </span>
           </Card>
@@ -65,7 +66,7 @@ export default function Appeals({ appeals, addAppeal, modalOpen, setModalOpen })
                 <input
                   value={form.topic}
                   onChange={(event) => setForm((current) => ({ ...current, topic: event.target.value }))}
-                  className="mt-2 w-full rounded-2xl border border-slate-700 bg-slate-950/70 px-4 py-3 text-white outline-none focus:border-purple-500"
+                  className="fintech-input mt-2 w-full rounded-2xl px-4 py-3 outline-none"
                   placeholder="Например, перенос отпуска"
                 />
               </label>
@@ -74,7 +75,7 @@ export default function Appeals({ appeals, addAppeal, modalOpen, setModalOpen })
                 <select
                   value={form.category}
                   onChange={(event) => setForm((current) => ({ ...current, category: event.target.value }))}
-                  className="mt-2 w-full rounded-2xl border border-slate-700 bg-slate-950/70 px-4 py-3 text-white outline-none focus:border-purple-500"
+                  className="fintech-input mt-2 w-full rounded-2xl px-4 py-3 outline-none"
                 >
                   {categories.map((category) => (
                     <option key={category}>{category}</option>
@@ -86,7 +87,7 @@ export default function Appeals({ appeals, addAppeal, modalOpen, setModalOpen })
                 <textarea
                   value={form.message}
                   onChange={(event) => setForm((current) => ({ ...current, message: event.target.value }))}
-                  className="mt-2 min-h-32 w-full resize-none rounded-2xl border border-slate-700 bg-slate-950/70 px-4 py-3 text-white outline-none focus:border-purple-500"
+                  className="fintech-input mt-2 min-h-32 w-full resize-none rounded-2xl px-4 py-3 outline-none"
                   placeholder="Опишите вопрос"
                 />
               </label>

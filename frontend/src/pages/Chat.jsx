@@ -229,6 +229,7 @@ export default function Chat({
     return (
       <div className="mx-auto max-w-4xl">
         <div className="mb-5">
+          <p className="page-eyebrow">Коммуникации</p>
           <h1 className="text-3xl font-bold tracking-tight text-white">Чаты</h1>
           <p className="mt-2 text-slate-400">Выберите переписку, которую хотите открыть.</p>
         </div>
@@ -248,10 +249,10 @@ export default function Chat({
                 onClick={() => { setSelectedContact(contact); setChatMode('peer'); }}
                 className="text-left"
               >
-                <Card className="h-full transition hover:border-purple-400/40 hover:bg-purple-950/15">
+                <Card className="h-full">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex min-w-0 items-start gap-3">
-                      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-purple-500/10 text-sm font-bold text-purple-300 ring-1 ring-purple-400/20">
+                      <div className="icon-tile h-10 w-10 shrink-0 rounded-2xl text-sm font-bold">
                         {initials(contact.full_name)}
                       </div>
                       <div className="min-w-0">
@@ -284,7 +285,7 @@ export default function Chat({
 
           {/* Техна */}
           <button type="button" onClick={() => setChatMode('assistant')} className="text-left">
-            <Card className="h-full transition hover:border-purple-400/40 hover:bg-purple-950/15">
+            <Card className="h-full">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-start gap-3">
                   <Mascot state="idle" size="md" />
@@ -295,12 +296,12 @@ export default function Chat({
                     </p>
                   </div>
                 </div>
-                <span className="shrink-0 rounded-full bg-slate-950/45 px-3 py-1 text-xs font-semibold text-slate-300 ring-1 ring-slate-700">
+                <span className="status-chip shrink-0 rounded-full px-3 py-1 text-xs font-semibold">
                   Ассистент
                 </span>
               </div>
-              <div className="mt-5 rounded-3xl border border-slate-700 bg-slate-950/45 p-4">
-                <p className="text-sm font-semibold text-slate-500">Быстрый старт</p>
+              <div className="fintech-control mt-5 rounded-2xl p-4">
+                <p className="metric-label">Быстрый старт</p>
                 <p className="mt-2 text-slate-200">Задайте вопрос или выберите готовый сценарий.</p>
               </div>
             </Card>
@@ -316,7 +317,7 @@ export default function Chat({
       <div className="mx-auto flex h-[calc(100vh-9.5rem)] max-w-4xl flex-col lg:h-[calc(100vh-8rem)]">
         <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="flex items-center gap-3">
-            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-purple-500/10 text-sm font-bold text-purple-300 ring-1 ring-purple-400/20">
+            <div className="icon-tile h-11 w-11 shrink-0 rounded-2xl text-sm font-bold">
               {initials(selectedContact.full_name)}
             </div>
             <div>
@@ -348,8 +349,8 @@ export default function Chat({
                   <div
                     className={`max-w-[82%] rounded-[24px] px-5 py-3 text-sm leading-6 sm:max-w-[70%] ${
                       isOwn
-                        ? 'bg-purple-600 text-white shadow-lg shadow-purple-950/30'
-                        : 'bg-slate-950/70 text-slate-200 ring-1 ring-slate-800'
+                        ? 'chat-bubble-user'
+                        : 'chat-bubble-peer'
                     }`}
                   >
                     <p>{msg.text}</p>
@@ -361,7 +362,7 @@ export default function Chat({
           </div>
 
           <form onSubmit={sendPeer} className="border-t border-slate-800 p-3 sm:p-4">
-            <div className="flex items-center gap-2 rounded-3xl bg-slate-950/70 p-2 ring-1 ring-slate-800">
+            <div className="fintech-control flex items-center gap-2 rounded-2xl p-2">
               <input
                 value={peerText}
                 onChange={(e) => setPeerText(e.target.value)}
@@ -423,7 +424,7 @@ export default function Chat({
                 key={item.prompt}
                 onClick={() => setAiText(item.prompt)}
                 disabled={isThinking}
-                className="shrink-0 rounded-2xl border border-slate-700 bg-slate-950/45 px-4 py-2 text-sm font-semibold text-slate-300 transition hover:border-purple-500/50 hover:text-white disabled:opacity-50"
+                className="status-chip shrink-0 rounded-2xl px-4 py-2 text-sm font-semibold transition hover:border-indigo-500/40 disabled:opacity-50"
               >
                 {item.label}
               </button>
@@ -440,10 +441,10 @@ export default function Chat({
                   <div
                     className={`rounded-[24px] px-5 py-3 text-sm leading-6 ${
                       isUser
-                        ? 'bg-purple-600 text-white shadow-lg shadow-purple-950/30'
+                        ? 'chat-bubble-user'
                         : message.state === 'error'
                           ? 'bg-red-500/15 text-red-100 ring-1 ring-red-500/40'
-                          : 'bg-slate-950/70 text-slate-200 ring-1 ring-slate-800'
+                          : 'chat-bubble-peer'
                     }`}
                   >
                     {message.state === 'error' && (
@@ -460,8 +461,8 @@ export default function Chat({
                   </div>
 
                   {!isUser && message.sources?.length > 0 && (
-                    <div className="rounded-2xl border border-purple-500/30 bg-purple-600/10 p-3">
-                      <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-purple-200">
+                    <div className="fintech-control rounded-2xl p-3">
+                      <div className="metric-label mb-2 flex items-center gap-2">
                         <BookOpenCheck size={14} />
                         Основания
                       </div>
@@ -492,7 +493,7 @@ export default function Chat({
         </div>
 
         <form onSubmit={sendToAssistant} className="border-t border-slate-800 p-3 sm:p-4">
-          <div className="flex items-center gap-2 rounded-3xl bg-slate-950/70 p-2 ring-1 ring-slate-800">
+          <div className="fintech-control flex items-center gap-2 rounded-2xl p-2">
             <input
               value={aiText}
               onChange={(e) => setAiText(e.target.value)}
@@ -518,7 +519,7 @@ export default function Chat({
 function ThinkingBubble() {
   return (
     <div className="flex animate-fade-in justify-start">
-      <div className="flex items-center gap-3 rounded-[24px] bg-slate-950/70 px-5 py-4 ring-1 ring-slate-800">
+      <div className="chat-bubble-peer flex items-center gap-3 rounded-[24px] px-5 py-4">
         <span className="flex gap-1">
           <span className="h-2 w-2 animate-pulse-soft rounded-full bg-purple-400" style={{ animationDelay: '0ms'   }} />
           <span className="h-2 w-2 animate-pulse-soft rounded-full bg-purple-400" style={{ animationDelay: '180ms' }} />

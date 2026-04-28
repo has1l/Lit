@@ -4,33 +4,45 @@
 
 @layer base {
   :root {
-    --color-bg:           #08080C;
-    --color-surface:      #121218;
-    --color-elevated:     #1A1A24;
-    --color-border:       #2A2A3C;
-    --color-accent:       #8A2BE2; /* Blueviolet */
-    --color-accent-soft:  rgba(138, 43, 226, 0.16);
-    --color-accent-ring:  rgba(138, 43, 226, 0.4);
-    --color-text:         #E1E4E6;
-    --color-text-strong:  #FFFFFF;
-    --color-text-muted:   #8A98A8;
-    --color-danger:       #DC143C;
-    --color-warning:      #F4A82F;
-    --shadow-card:        0 18px 50px rgba(0, 0, 0, 0.45);
+    --color-bg:           #070914;
+    --color-bg-soft:      #0A1020;
+    --color-surface:      rgba(12, 17, 31, 0.92);
+    --color-elevated:     rgba(17, 24, 39, 0.94);
+    --color-control:      rgba(255, 255, 255, 0.06);
+    --color-border:       rgba(148, 163, 184, 0.18);
+    --color-border-strong:rgba(148, 163, 184, 0.30);
+    --color-accent:       #4F46E5;
+    --color-accent-2:     #2563EB;
+    --color-accent-3:     #7C3AED;
+    --color-accent-soft:  rgba(79, 70, 229, 0.14);
+    --color-accent-ring:  rgba(79, 70, 229, 0.32);
+    --color-text:         #E5EAF3;
+    --color-text-strong:  #F8FAFC;
+    --color-text-muted:   #96A3B8;
+    --color-danger:       #EF4444;
+    --color-warning:      #F59E0B;
+    --shadow-card:        0 18px 44px rgba(0, 0, 0, 0.24);
+    --shadow-hover:       0 24px 60px rgba(0, 0, 0, 0.30);
   }
 
   html.theme-light {
-    --color-bg:           #F8F8FA;
-    --color-surface:      #FFFFFF;
-    --color-elevated:     #F0F0F4;
-    --color-border:       #DCDCE4;
-    --color-accent:       #7000FF;
-    --color-accent-soft:  rgba(112, 0, 255, 0.10);
-    --color-accent-ring:  rgba(112, 0, 255, 0.32);
-    --color-text:         #1A1A24;
-    --color-text-strong:  #050505;
-    --color-text-muted:   #5D6D7C;
-    --shadow-card:        0 18px 45px rgba(15, 15, 30, 0.10);
+    --color-bg:           #F6F8FF;
+    --color-bg-soft:      #EDF2FF;
+    --color-surface:      rgba(255, 255, 255, 0.88);
+    --color-elevated:     rgba(255, 255, 255, 0.96);
+    --color-control:      rgba(15, 23, 42, 0.04);
+    --color-border:       rgba(15, 23, 42, 0.10);
+    --color-border-strong:rgba(15, 23, 42, 0.16);
+    --color-accent:       #4F46E5;
+    --color-accent-2:     #2563EB;
+    --color-accent-3:     #7C3AED;
+    --color-accent-soft:  rgba(79, 70, 229, 0.09);
+    --color-accent-ring:  rgba(79, 70, 229, 0.22);
+    --color-text:         #172033;
+    --color-text-strong:  #07111F;
+    --color-text-muted:   #64748B;
+    --shadow-card:        0 14px 34px rgba(43, 56, 96, 0.09);
+    --shadow-hover:       0 20px 46px rgba(43, 56, 96, 0.14);
   }
 
   html { background: var(--color-bg); }
@@ -40,53 +52,265 @@
     min-width: 320px;
     overflow-x: hidden;
     color: var(--color-text);
-    background-color: #08080C;
-    background-image: 
-      radial-gradient(ellipse at 80% -20%, rgba(138, 43, 226, 0.2), transparent 50%),
-      radial-gradient(ellipse at -20% 120%, rgba(0, 163, 255, 0.15), transparent 50%);
+    background-color: var(--color-bg);
+    background-image:
+      radial-gradient(circle at 18% -8%, rgba(79, 70, 229, 0.18), transparent 32rem),
+      radial-gradient(circle at 90% 0%, rgba(37, 99, 235, 0.14), transparent 30rem),
+      linear-gradient(135deg, #070914 0%, #0A1020 52%, #070914 100%);
     background-attachment: fixed;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
     font-family: 'Inter', 'SF Pro Text', system-ui, sans-serif;
   }
 
-  /* The Liquid Glass Mesh Overlay */
   body::before {
     content: "";
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
     z-index: -1;
-    background-image: 
-      radial-gradient(circle at 20% 40%, rgba(138, 43, 226, 0.18), transparent 40%),
-      radial-gradient(circle at 80% 60%, rgba(0, 163, 255, 0.12), transparent 40%),
-      radial-gradient(circle at 50% 90%, rgba(112, 0, 255, 0.15), transparent 40%);
-    filter: blur(60px);
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: linear-gradient(to bottom, rgba(0,0,0,0.85), transparent 72%);
+    opacity: 0.55;
     pointer-events: none;
   }
 
   html.theme-light body {
     background:
-      radial-gradient(circle at 24% 8%,  rgba(112, 0, 255, 0.08), transparent 32rem),
-      radial-gradient(circle at 90% 12%, rgba(0, 163, 255, 0.06), transparent 30rem),
-      linear-gradient(135deg, #F8F8FA 0%, #FFFFFF 52%, #F8F8FA 100%);
+      radial-gradient(circle at 20% -8%, rgba(79, 70, 229, 0.10), transparent 34rem),
+      radial-gradient(circle at 88% 2%, rgba(37, 99, 235, 0.10), transparent 31rem),
+      linear-gradient(135deg, #F6F8FF 0%, #FFFFFF 50%, #F2F6FF 100%);
     background-attachment: fixed;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--color-accent-ring);
+    outline-offset: 3px;
   }
 
   * { box-sizing: border-box; }
 
   ::selection {
-    background: rgba(138, 43, 226, 0.4);
+    background: rgba(79, 70, 229, 0.36);
     color: #ffffff;
   }
 }
 
 /* ───── Light-theme overrides for slate-based dark classes ───────────────── */
 @layer components {
+  .fintech-surface {
+    color: var(--color-text);
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0)),
+      var(--color-surface);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-card);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+
+  .metric-card {
+    color: var(--color-text);
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0)),
+      var(--color-elevated);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-card);
+  }
+
+  .metric-label {
+    color: var(--color-text-muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .metric-value {
+    color: var(--color-text-strong);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+  }
+
+  .status-chip {
+    color: var(--color-text);
+    background: var(--color-control);
+    border: 1px solid var(--color-border);
+  }
+
+  .icon-tile {
+    display: grid;
+    place-items: center;
+    color: var(--color-accent);
+    background: var(--color-accent-soft);
+    border: 1px solid rgba(79, 70, 229, 0.18);
+  }
+
+  .data-row {
+    color: var(--color-text);
+    background: var(--color-control);
+    border: 1px solid var(--color-border);
+    transition: border-color 180ms ease, background-color 180ms ease, transform 180ms ease;
+  }
+
+  .data-row:hover {
+    border-color: var(--color-border-strong);
+    background: var(--color-accent-soft);
+  }
+
+  .page-eyebrow {
+    color: var(--color-text-muted);
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .chat-bubble-user {
+    color: #fff;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0)),
+      var(--color-accent);
+    box-shadow: 0 12px 30px rgba(37, 99, 235, 0.22);
+  }
+
+  .chat-bubble-peer {
+    color: var(--color-text);
+    background: var(--color-control);
+    border: 1px solid var(--color-border);
+  }
+
+  .fintech-panel {
+    color: var(--color-text);
+    background: var(--color-elevated);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-card);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  .fintech-control {
+    color: var(--color-text);
+    background: var(--color-control);
+    border: 1px solid var(--color-border);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+
+  .fintech-card-hover {
+    transition: transform 220ms ease, border-color 220ms ease, background-color 220ms ease, box-shadow 220ms ease;
+  }
+
+  .fintech-card-hover:hover {
+    transform: translateY(-1px);
+    border-color: var(--color-border-strong);
+    box-shadow: var(--shadow-hover);
+  }
+
+  .fintech-button-primary {
+    color: #fff;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0)),
+      var(--color-accent);
+    box-shadow: 0 12px 28px rgba(37, 99, 235, 0.24);
+  }
+
+  .fintech-button-primary:hover {
+    filter: brightness(1.06);
+    box-shadow: 0 16px 34px rgba(37, 99, 235, 0.30);
+  }
+
+  .fintech-button-secondary,
+  .fintech-button-ghost {
+    color: var(--color-text-strong);
+    background: var(--color-control);
+    border: 1px solid var(--color-border);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+
+  .fintech-button-secondary:hover,
+  .fintech-button-ghost:hover {
+    background: var(--color-accent-soft);
+    border-color: var(--color-accent-ring);
+  }
+
+  .fintech-sidebar {
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0)),
+      rgba(7, 10, 20, 0.86);
+    border-color: var(--color-border);
+    box-shadow: 10px 0 40px rgba(0,0,0,0.18);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+
+  .theme-light .fintech-sidebar {
+    background: rgba(255,255,255,0.86);
+    box-shadow: 10px 0 34px rgba(43, 56, 96, 0.08);
+  }
+
+  .fintech-topbar,
+  .fintech-mobile-nav {
+    background: rgba(7, 10, 20, 0.72);
+    border-color: var(--color-border);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+
+  .theme-light .fintech-topbar,
+  .theme-light .fintech-mobile-nav {
+    background: rgba(255,255,255,0.78);
+  }
+
+  .fintech-nav-item {
+    min-height: 48px;
+    color: var(--color-text-muted);
+    transition: color 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
+  }
+
+  .fintech-nav-item:hover {
+    color: var(--color-text-strong);
+    background: var(--color-control);
+  }
+
+  .fintech-nav-active {
+    color: var(--color-text-strong);
+    background:
+      linear-gradient(135deg, rgba(255,255,255,0.10), transparent 55%),
+      var(--color-accent-soft);
+    box-shadow: inset 3px 0 0 var(--color-accent), inset 0 0 0 1px rgba(79, 70, 229, 0.18);
+  }
+
+  .fintech-input {
+    min-height: 48px;
+    color: var(--color-text-strong);
+    background: var(--color-control);
+    border: 1px solid var(--color-border);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+
+  .fintech-input::placeholder {
+    color: var(--color-text-muted);
+  }
+
+  .fintech-input:focus {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 4px var(--color-accent-soft);
+  }
+
   .theme-light .bg-slate-950\/80,
   .theme-light .bg-slate-950\/95,
   .theme-light .bg-slate-950\/75,
   .theme-light .bg-slate-950\/55 {
-    background-color: rgba(255, 255, 255, 0.94);
+    background-color: rgba(255, 255, 255, 0.86);
   }
 
   .theme-light .bg-slate-950\/70,
@@ -96,49 +320,78 @@
   .theme-light .bg-slate-900\/72,
   .theme-light .bg-slate-900\/70,
   .theme-light .bg-slate-900 {
-    background-color: rgba(255, 255, 255, 0.92);
+    background-color: rgba(255, 255, 255, 0.82);
   }
 
-  .theme-light .bg-slate-800 { background-color: #DDE2D5; }
+  .theme-light .bg-slate-800 { background-color: rgba(15, 23, 42, 0.06); }
 
   .theme-light .border-slate-800,
   .theme-light .border-slate-700,
   .theme-light .border-slate-700\/70,
   .theme-light .ring-slate-800,
   .theme-light .ring-slate-700 {
-    border-color: #D5DCC9;
-    --tw-ring-color: #D5DCC9;
+    border-color: rgba(15, 23, 42, 0.10);
+    --tw-ring-color: rgba(15, 23, 42, 0.10);
   }
 
   .theme-light .divide-slate-800 > :not([hidden]) ~ :not([hidden]) {
-    border-color: #D5DCC9;
+    border-color: rgba(15, 23, 42, 0.10);
   }
 
   .theme-light .text-white,
   .theme-light .text-slate-100,
   .theme-light .text-slate-200,
   .theme-light .text-slate-300 {
-    color: #1A2530;
+    color: var(--color-text-strong);
   }
 
   .theme-light .text-slate-400,
   .theme-light .text-slate-500 {
-    color: #5D6D7C;
+    color: var(--color-text-muted);
+  }
+
+  .theme-light .text-purple-200,
+  .theme-light .text-purple-300,
+  .theme-light .text-purple-400 {
+    color: #5B21B6;
+  }
+
+  .theme-light .bg-purple-600\/10,
+  .theme-light .bg-purple-500\/10 {
+    background-color: rgba(79, 70, 229, 0.09);
+  }
+
+  .theme-light .ring-purple-400\/20,
+  .theme-light .ring-purple-500\/40,
+  .theme-light .border-purple-400\/30 {
+    --tw-ring-color: rgba(79, 70, 229, 0.22);
+    border-color: rgba(79, 70, 229, 0.20);
   }
 
   .theme-light .theme-preserve-dark,
-  .theme-light .theme-preserve-dark .text-white,
-  .theme-light .theme-preserve-dark .text-green-50 {
+  .theme-light .theme-preserve-dark .text-white {
     color: #ffffff;
   }
 
-  .theme-light .hover\:text-white:hover { color: #1A2530; }
+  .theme-light .fintech-button-primary,
+  .theme-light .bg-purple-500,
+  .theme-light .bg-purple-600,
+  .theme-light .bg-red-500 {
+    color: #ffffff;
+  }
+
+  .theme-light .hover\:text-white:hover { color: var(--color-text-strong); }
 
   .theme-light .hover\:bg-slate-900:hover,
-  .theme-light .hover\:bg-slate-800:hover { background-color: #EAEDE3; }
+  .theme-light .hover\:bg-slate-800:hover { background-color: rgba(91, 95, 239, 0.09); }
 
   .theme-light .shadow-\[0_18px_50px_rgba\(0\2c 0\2c 0\2c 0\.28\)\] {
-    box-shadow: 0 18px 50px rgba(0, 18, 33, 0.10);
+    box-shadow: var(--shadow-card);
+  }
+
+  .theme-light input,
+  .theme-light textarea {
+    color: var(--color-text-strong);
   }
 }
 

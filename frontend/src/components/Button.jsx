@@ -1,7 +1,7 @@
 const variants = {
-  primary: 'bg-purple-600 text-white shadow-lg shadow-purple-900/50 hover:bg-purple-500',
-  secondary: 'bg-black/70 text-white ring-1 ring-purple-500/60 hover:bg-purple-950/60',
-  ghost: 'text-slate-300 hover:bg-slate-800',
+  primary: 'fintech-button-primary border border-transparent',
+  secondary: 'fintech-button-secondary',
+  ghost: 'fintech-button-ghost',
 };
 
 export default function Button({
@@ -14,7 +14,7 @@ export default function Button({
   return (
     <button
       type={type}
-      className={`inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold transition active:scale-[0.98] ${variants[variant]} ${className}`}
+      className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold transition duration-200 ease-out active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 ${variants[variant]} ${className}`}
       {...props}
     >
       {children}

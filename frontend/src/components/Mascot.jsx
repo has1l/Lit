@@ -1,23 +1,13 @@
-/**
- * Эмоциональный маскот «Техна» — ядро визуальной идентичности ассистента.
- *
- * Состояния (по дизайн-стратегии PDF "Хроматическая архитектура 1221 Systems"):
- *   idle      — медленная пульсация в фирменном глубоком синем  → готовность
- *   thinking  — перетекающий conic-градиент с зелёными вкраплениями → генерация
- *   success   — чистый зелёный, лёгкий зум-импульс             → успешный ответ
- *   empty     — приглушённый янтарно-серый                      → нет данных
- *   error     — тёплый красный                                  → системная ошибка
- *
- * Цветом мы передаём эмоцию: интерфейс "сочувствует", а не просто отдаёт текст.
- */
-
 import { Sparkles } from 'lucide-react';
+import { useState } from 'react';
+
+const MASCOT_SRC = '/assets/image.png';
 
 const STATE_VARIANTS = {
   idle: {
     bg:      'bg-mascot-idle',
     ring:    'ring-slate-700/60',
-    glow:    'shadow-[0_0_28px_rgba(106,178,22,0.18)]',
+    glow:    'shadow-[0_0_28px_rgba(109,94,246,0.18)]',
     anim:    'animate-pulse-soft',
   },
   thinking: {
@@ -47,24 +37,37 @@ const STATE_VARIANTS = {
 };
 
 const SIZE_MAP = {
-  sm: { wrap: 'h-9 w-9',  icon: 16 },
-  md: { wrap: 'h-12 w-12', icon: 22 },
-  lg: { wrap: 'h-20 w-20', icon: 36 },
-  xl: { wrap: 'h-28 w-28', icon: 48 },
+  sm: { wrap: 'h-9 w-9',  icon: 15 },
+  md: { wrap: 'h-12 w-12', icon: 20 },
+  lg: { wrap: 'h-20 w-20', icon: 30 },
+  xl: { wrap: 'h-28 w-28', icon: 42 },
 };
 
 export default function Mascot({ state = 'idle', size = 'md', label }) {
   const variant   = STATE_VARIANTS[state] || STATE_VARIANTS.idle;
   const dimension = SIZE_MAP[size] || SIZE_MAP.md;
+  const [hasImage, setHasImage] = useState(true);
 
   return (
     <div className="inline-flex items-center gap-3">
       <div
-        className={`grid place-items-center rounded-[28%] ring-1 transition-all duration-500
-          ${dimension.wrap} ${variant.bg} ${variant.ring} ${variant.glow} ${variant.anim}`}
+        className={`relative grid place-items-center overflow-hidden rounded-full bg-transparent ring-1 transition-all duration-500
+          ${dimension.wrap} ${variant.ring} ${variant.glow} ${state === 'thinking' ? variant.anim : ''}`}
         aria-hidden="true"
       >
-        <Sparkles className="theme-preserve-dark text-white" size={dimension.icon} strokeWidth={2.4} />
+        {hasImage ? (
+          <img
+            src={MASCOT_SRC}
+            alt=""
+            className="h-full w-full scale-[1.18] object-cover object-[50%_18%]"
+            draggable="false"
+            onError={() => setHasImage(false)}
+          />
+        ) : (
+          <div className={`grid h-full w-full place-items-center ${variant.bg} ${variant.anim}`}>
+            <Sparkles className="theme-preserve-dark text-white" size={dimension.icon} strokeWidth={2.4} />
+          </div>
+        )}
       </div>
       {label && (
         <span className="text-sm font-semibold text-slate-300 theme-light:text-slate-700">
