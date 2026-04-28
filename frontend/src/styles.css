@@ -189,6 +189,101 @@
     border: 1px solid var(--color-border);
   }
 
+  .assistant-chat-card {
+    color: var(--color-text);
+    background:
+      radial-gradient(circle at 86% 0%, rgba(37, 99, 235, 0.18), transparent 34%),
+      linear-gradient(135deg, rgba(79, 70, 229, 0.24), rgba(37, 99, 235, 0.10) 48%, rgba(15, 23, 42, 0.72));
+    border-color: rgba(167, 139, 250, 0.45);
+    box-shadow: 0 24px 80px rgba(79, 70, 229, 0.20);
+  }
+
+  .theme-light .assistant-chat-card {
+    background:
+      radial-gradient(circle at 88% 0%, rgba(99, 102, 241, 0.16), transparent 36%),
+      linear-gradient(135deg, rgba(129, 140, 248, 0.20), rgba(255, 255, 255, 0.88) 52%, rgba(239, 246, 255, 0.92));
+    border-color: rgba(129, 140, 248, 0.34);
+    box-shadow: 0 18px 48px rgba(79, 70, 229, 0.12);
+  }
+
+  .assistant-chat-title {
+    color: var(--color-text-strong);
+  }
+
+  .assistant-chat-muted {
+    color: var(--color-text-muted);
+  }
+
+  .assistant-chat-badge {
+    color: #F5F3FF;
+    background: rgba(124, 58, 237, 0.24);
+    border: 1px solid rgba(196, 181, 253, 0.32);
+  }
+
+  .theme-light .assistant-chat-badge {
+    color: #4C1D95;
+    background: rgba(124, 58, 237, 0.12);
+    border-color: rgba(124, 58, 237, 0.22);
+  }
+
+  .assistant-chat-cta {
+    color: #BFDBFE;
+  }
+
+  .theme-light .assistant-chat-cta {
+    color: #2563EB;
+  }
+
+  .manager-chat-card {
+    border-color: rgba(79, 70, 229, 0.28);
+    background:
+      linear-gradient(135deg, rgba(79, 70, 229, 0.10), transparent 46%),
+      var(--color-surface);
+  }
+
+  .theme-light .manager-chat-card {
+    border-color: rgba(79, 70, 229, 0.20);
+    background:
+      linear-gradient(135deg, rgba(79, 70, 229, 0.08), rgba(255,255,255,0.92) 52%),
+      var(--color-surface);
+  }
+
+  .manager-chat-avatar {
+    background: rgba(79, 70, 229, 0.16);
+    color: #C7D2FE;
+    border: 1px solid rgba(165, 180, 252, 0.34);
+  }
+
+  .theme-light .manager-chat-avatar {
+    background: rgba(79, 70, 229, 0.12);
+    color: #3730A3;
+    border-color: rgba(79, 70, 229, 0.24);
+  }
+
+  .manager-chat-badge {
+    background: rgba(79, 70, 229, 0.16);
+    color: #C7D2FE;
+    border: 1px solid rgba(165, 180, 252, 0.28);
+  }
+
+  .theme-light .manager-chat-badge {
+    background: rgba(79, 70, 229, 0.12);
+    color: #3730A3;
+    border-color: rgba(79, 70, 229, 0.22);
+  }
+
+  .manager-chat-chip {
+    background: rgba(79, 70, 229, 0.10);
+    color: #C7D2FE;
+    border: 1px solid rgba(165, 180, 252, 0.26);
+  }
+
+  .theme-light .manager-chat-chip {
+    background: rgba(79, 70, 229, 0.08);
+    color: #4338CA;
+    border-color: rgba(79, 70, 229, 0.20);
+  }
+
   .fintech-panel {
     color: var(--color-text);
     background: var(--color-elevated);

@@ -44,6 +44,11 @@ function formatRelative(isoStr) {
   }
 }
 
+function isManagerContact(contact) {
+  const haystack = `${contact.position || ''} ${contact.role || ''}`.toLowerCase();
+  return haystack.includes('lead') || haystack.includes('руковод') || haystack.includes('директор') || haystack.includes('manager');
+}
+
 export default function Chat({
   draftPrompt,
   clearDraftPrompt,
@@ -263,7 +268,7 @@ export default function Chat({
         <div className="grid gap-4 md:grid-cols-2">
           {/* Техна */}
           <button type="button" onClick={() => setChatMode('assistant')} className="text-left">
-            <Card className="relative h-full overflow-hidden border-purple-400/45 bg-[linear-gradient(135deg,rgba(79,70,229,0.24),rgba(37,99,235,0.10)_48%,rgba(15,23,42,0.72))] ring-1 ring-purple-400/25 shadow-[0_24px_80px_rgba(79,70,229,0.20)]">
+            <Card className="assistant-chat-card relative h-full overflow-hidden ring-1 ring-purple-400/25">
               <div className="pointer-events-none absolute right-[-4rem] top-[-5rem] h-40 w-40 rounded-full bg-purple-500/30 blur-3xl" />
               <div className="pointer-events-none absolute bottom-[-4rem] left-[-4rem] h-36 w-36 rounded-full bg-blue-500/20 blur-3xl" />
               <div className="flex items-start justify-between gap-4">
@@ -271,26 +276,26 @@ export default function Chat({
                   <Mascot state="idle" size="md" variant="support" />
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-xl font-bold text-white">Техна</p>
-                      <span className="rounded-full bg-purple-500/20 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-purple-100 ring-1 ring-purple-300/30">
+                      <p className="assistant-chat-title text-xl font-bold">Техна</p>
+                      <span className="assistant-chat-badge rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.14em]">
                         AI
                       </span>
                     </div>
-                    <p className="mt-1 text-sm font-semibold text-slate-400">
+                    <p className="assistant-chat-muted mt-1 text-sm font-semibold">
                       AI-помощник по отпуску, зарплате, ДМС и документам
                     </p>
                   </div>
                 </div>
-                <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-blue-500/15 px-3 py-1 text-xs font-semibold text-blue-100 ring-1 ring-blue-300/25">
+                <span className="assistant-chat-badge inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold">
                   <Sparkles size={13} />
                   Быстрый ответ
                 </span>
               </div>
               <div className="fintech-control mt-5 rounded-2xl p-4">
                 <p className="metric-label">Быстрый старт</p>
-                <p className="mt-2 text-slate-200">Задайте вопрос или выберите готовый сценарий.</p>
+                <p className="assistant-chat-title mt-2">Задайте вопрос или выберите готовый сценарий.</p>
               </div>
-              <div className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-blue-200">
+              <div className="assistant-chat-cta mt-4 inline-flex items-center gap-2 text-sm font-semibold">
                 Открыть ассистента
                 <ChevronLeft className="rotate-180" size={16} />
               </div>
@@ -305,6 +310,7 @@ export default function Chat({
             const preview  = last
               ? `${fromSelf ? 'Вы: ' : ''}${last.text}`
               : 'Нет сообщений — напишите первым';
+            const isManager = isManagerContact(contact);
             return (
               <button
                 key={contact.email}
@@ -312,14 +318,25 @@ export default function Chat({
                 onClick={() => { setSelectedContact(contact); setChatMode('peer'); }}
                 className="text-left"
               >
-                <Card className="h-full">
+                <Card className={`h-full ${isManager ? 'manager-chat-card' : ''}`}>
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex min-w-0 items-start gap-3">
-                      <div className="icon-tile h-10 w-10 shrink-0 rounded-2xl text-sm font-bold">
+                      <div className={`grid h-12 w-12 shrink-0 place-items-center rounded-2xl text-sm font-bold ${
+                        isManager
+                          ? 'manager-chat-avatar'
+                          : 'icon-tile'
+                      }`}>
                         {initials(contact.full_name)}
                       </div>
                       <div className="min-w-0">
-                        <p className="truncate text-xl font-bold text-white">{contact.full_name}</p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="truncate text-xl font-bold text-white">{contact.full_name}</p>
+                          {isManager && (
+                            <span className="manager-chat-badge rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.14em]">
+                              Руководитель
+                            </span>
+                          )}
+                        </div>
                         <p className="mt-1 truncate text-sm font-semibold text-slate-400">
                           {contact.position} · {contact.department}
                         </p>
@@ -338,9 +355,23 @@ export default function Chat({
                       )}
                     </div>
                   </div>
-                  <p className={`mt-4 line-clamp-2 text-sm ${unread > 0 ? 'font-semibold text-slate-100' : 'text-slate-400'}`}>
-                    {preview}
-                  </p>
+                  <div className="fintech-control mt-5 rounded-2xl p-4">
+                    <p className="metric-label">Последнее сообщение</p>
+                    <p className={`mt-2 line-clamp-2 text-base leading-6 ${
+                      unread > 0 ? 'font-semibold text-white' : 'text-slate-300 theme-light:text-slate-700'
+                    }`}>
+                      {preview}
+                    </p>
+                  </div>
+                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
+                      isManager
+                        ? 'manager-chat-chip'
+                        : 'status-chip'
+                    }`}>
+                      {isManager ? 'Приоритетный контакт' : 'Переписка'}
+                    </span>
+                  </div>
                 </Card>
               </button>
             );
