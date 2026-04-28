@@ -28,7 +28,7 @@ from database import get_connection
 
 CHROMA_PATH      = Path(__file__).parent / "chroma_db"
 EMBED_MODEL      = "paraphrase-multilingual-MiniLM-L12-v2"
-VECTOR_THRESHOLD = 0.70
+VECTOR_THRESHOLD = 10.0
 
 _embed_model = None
 _chroma_coll = None
