@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Sparkles } from 'lucide-react';
 import Layout from './components/Layout.jsx';
 import LoginScreen from './components/LoginScreen.jsx';
-import Mascot from './components/Mascot.jsx';
 import { defaultViewMode, displayUser } from './lib/displayUser.js';
 import Appeals from './pages/Appeals.jsx';
 import Chat from './pages/Chat.jsx';
@@ -30,7 +30,9 @@ export default function App() {
     return (
       <div className="grid min-h-screen place-items-center">
         <div className="flex flex-col items-center gap-4">
-          <Mascot state="thinking" size="xl" />
+          <div className="grid h-20 w-20 place-items-center rounded-3xl bg-purple-500/15 text-purple-200 ring-1 ring-purple-300/30 shadow-[0_0_42px_rgba(124,58,237,0.24)]">
+            <Sparkles className="animate-pulse" size={34} />
+          </div>
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">
             Подключаемся к&nbsp;1221 Systems…
           </p>

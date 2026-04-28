@@ -1,4 +1,4 @@
-import { AlertCircle, BookOpenCheck, ChevronLeft, Mic, MicOff, SendHorizonal } from 'lucide-react';
+import { AlertCircle, BookOpenCheck, ChevronLeft, Mic, MicOff, SendHorizonal, Sparkles } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { sendChatMessage } from '../api/chat.js';
 import { fetchContacts, fetchMessages, postMessage } from '../api/messages.js';
@@ -261,6 +261,42 @@ export default function Chat({
           <p className="mt-2 text-slate-400">Выберите переписку, которую хотите открыть.</p>
         </div>
         <div className="grid gap-4 md:grid-cols-2">
+          {/* Техна */}
+          <button type="button" onClick={() => setChatMode('assistant')} className="text-left">
+            <Card className="relative h-full overflow-hidden border-purple-400/45 bg-[linear-gradient(135deg,rgba(79,70,229,0.24),rgba(37,99,235,0.10)_48%,rgba(15,23,42,0.72))] ring-1 ring-purple-400/25 shadow-[0_24px_80px_rgba(79,70,229,0.20)]">
+              <div className="pointer-events-none absolute right-[-4rem] top-[-5rem] h-40 w-40 rounded-full bg-purple-500/30 blur-3xl" />
+              <div className="pointer-events-none absolute bottom-[-4rem] left-[-4rem] h-36 w-36 rounded-full bg-blue-500/20 blur-3xl" />
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <Mascot state="idle" size="md" variant="support" />
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-xl font-bold text-white">Техна</p>
+                      <span className="rounded-full bg-purple-500/20 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-purple-100 ring-1 ring-purple-300/30">
+                        AI
+                      </span>
+                    </div>
+                    <p className="mt-1 text-sm font-semibold text-slate-400">
+                      AI-помощник по отпуску, зарплате, ДМС и документам
+                    </p>
+                  </div>
+                </div>
+                <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-blue-500/15 px-3 py-1 text-xs font-semibold text-blue-100 ring-1 ring-blue-300/25">
+                  <Sparkles size={13} />
+                  Быстрый ответ
+                </span>
+              </div>
+              <div className="fintech-control mt-5 rounded-2xl p-4">
+                <p className="metric-label">Быстрый старт</p>
+                <p className="mt-2 text-slate-200">Задайте вопрос или выберите готовый сценарий.</p>
+              </div>
+              <div className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-blue-200">
+                Открыть ассистента
+                <ChevronLeft className="rotate-180" size={16} />
+              </div>
+            </Card>
+          </button>
+
           {/* Контакты (руководитель / сотрудники) */}
           {contacts.map((contact) => {
             const last     = contact.last_message;
@@ -309,30 +345,6 @@ export default function Chat({
               </button>
             );
           })}
-
-          {/* Техна */}
-          <button type="button" onClick={() => setChatMode('assistant')} className="text-left">
-            <Card className="h-full">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-3">
-                  <Mascot state="idle" size="md" variant="support" />
-                  <div>
-                    <p className="text-xl font-bold text-white">Техна</p>
-                    <p className="mt-1 text-sm font-semibold text-slate-400">
-                      AI-помощник по отпуску, зарплате, ДМС и документам
-                    </p>
-                  </div>
-                </div>
-                <span className="status-chip shrink-0 rounded-full px-3 py-1 text-xs font-semibold">
-                  Ассистент
-                </span>
-              </div>
-              <div className="fintech-control mt-5 rounded-2xl p-4">
-                <p className="metric-label">Быстрый старт</p>
-                <p className="mt-2 text-slate-200">Задайте вопрос или выберите готовый сценарий.</p>
-              </div>
-            </Card>
-          </button>
         </div>
       </div>
     );
@@ -575,7 +587,9 @@ function ThinkingBubble() {
   return (
     <div className="flex animate-fade-in justify-start">
       <div className="mr-3 mt-1 hidden shrink-0 sm:block">
-        <Mascot state="thinking" size="sm" variant="support" />
+        <div className="grid h-9 w-9 place-items-center rounded-2xl bg-purple-500/15 text-purple-200 ring-1 ring-purple-300/30 shadow-[0_0_28px_rgba(124,58,237,0.20)]">
+          <Sparkles size={17} className="animate-pulse" />
+        </div>
       </div>
       <div className="chat-bubble-peer flex items-center gap-3 rounded-[24px] px-5 py-4">
         <span className="flex gap-1">

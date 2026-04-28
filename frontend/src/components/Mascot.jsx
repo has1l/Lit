@@ -26,7 +26,7 @@ const STATE_VARIANTS = {
     bg:      'bg-mascot-thinking bg-[length:200%_200%]',
     ring:    'ring-purple-500/40',
     glow:    'shadow-glow',
-    anim:    'animate-spin-slow',
+    anim:    'animate-pulse-soft',
   },
   success: {
     bg:      'bg-mascot-success',
