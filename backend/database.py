@@ -199,10 +199,52 @@ def init_db() -> None:
         )
     """)
 
+    # ── Магазин наград ────────────────────────────────────────────────────────
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS reward_items (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            title       TEXT    NOT NULL,
+            description TEXT    NOT NULL DEFAULT '',
+            cost_points INTEGER NOT NULL,
+            quantity    INTEGER NOT NULL DEFAULT -1,
+            created_by  TEXT    NOT NULL REFERENCES employees(email),
+            is_active   INTEGER NOT NULL DEFAULT 1,
+            created_at  TEXT    NOT NULL
+                DEFAULT (strftime('%Y-%m-%dT%H:%M:%S', 'now', 'localtime'))
+        )
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS reward_requests (
+            id             INTEGER PRIMARY KEY AUTOINCREMENT,
+            item_id        INTEGER NOT NULL REFERENCES reward_items(id),
+            employee_email TEXT    NOT NULL REFERENCES employees(email),
+            status         TEXT    NOT NULL DEFAULT 'pending',
+            reviewed_by    TEXT    REFERENCES employees(email),
+            reviewed_at    TEXT,
+            created_at     TEXT    NOT NULL
+                DEFAULT (strftime('%Y-%m-%dT%H:%M:%S', 'now', 'localtime'))
+        )
+    """)
+
     # Миграция difficulty в goals
     goal_cols = {row[1] for row in cur.execute("PRAGMA table_info(goals)").fetchall()}
     if "difficulty" not in goal_cols:
         cur.execute("ALTER TABLE goals ADD COLUMN difficulty TEXT NOT NULL DEFAULT 'medium'")
+
+    # Seed: примеры наград в магазине
+    if cur.execute("SELECT COUNT(*) FROM reward_items").fetchone()[0] == 0:
+        seed_items = [
+            ("Абонемент в спортзал (1 мес.)", "Оплата месячного абонемента в ближайший фитнес-клуб", 500, 3, "hr@portal-test.1221systems.ru"),
+            ("Мерч 1221 Systems", "Фирменная толстовка с логотипом компании", 300, 10, "hr@portal-test.1221systems.ru"),
+            ("День удалённой работы", "Один дополнительный день работы из дома по согласованию", 150, -1, "dir@portal-test.1221systems.ru"),
+            ("Скидка 50% в кафе партнёра", "Купон на скидку в ресторане-партнёре рядом с офисом", 100, 20, "hr@portal-test.1221systems.ru"),
+            ("Ранний уход в пятницу", "Уйти на 2 часа раньше в любую пятницу месяца", 200, -1, "dir@portal-test.1221systems.ru"),
+        ]
+        cur.executemany(
+            "INSERT INTO reward_items (title, description, cost_points, quantity, created_by) VALUES (?,?,?,?,?)",
+            seed_items,
+        )
 
     # ── Seed: 7 сотрудников ───────────────────────────────────────────────────
     # Порядок важен: сначала без manager_email, потом со ссылкой

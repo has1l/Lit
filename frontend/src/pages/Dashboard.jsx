@@ -232,7 +232,7 @@ export default function Dashboard({ openChatWithPrompt, navigate, profile }) {
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="metric-label">Рабочий кабинет</p>
-            <h1 className="mt-2 text-2xl font-bold tracking-tight text-white sm:text-4xl">
+            <h1 className="mt-2 text-xl font-bold tracking-tight text-white sm:text-4xl">
               {`Доброе утро, ${profile?.name || ''}`}
             </h1>
             <div className="mt-4 flex flex-wrap gap-2">
@@ -276,7 +276,7 @@ export default function Dashboard({ openChatWithPrompt, navigate, profile }) {
         </div>
       </Card>
 
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
         <div className="metric-card rounded-2xl p-4">
           <div className="flex items-center justify-between gap-3">
             <p className="metric-label">Сегодня</p>
@@ -453,7 +453,7 @@ export default function Dashboard({ openChatWithPrompt, navigate, profile }) {
         </Card>
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
+      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-[1.15fr_0.85fr]">
         <Card>
           <div>
             <h2 className="text-xl font-bold text-white">Техна рекомендует</h2>

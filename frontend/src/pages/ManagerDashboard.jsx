@@ -97,9 +97,9 @@ function ProfileModal({ employee, onClose, onChat }) {
               {initials(emp.full_name)}
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-white">{emp.full_name}</h2>
-              <p className="mt-1 text-sm text-slate-400">{emp.position} · {emp.department}</p>
-              <span className={`mt-2 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ring-1 ${STATUS_CHIP[emp.online_status || 'offline']}`}>
+              <h2 className="text-xl font-bold text-white sm:text-2xl">{emp.full_name}</h2>
+              <p className="mt-1 text-xs text-slate-400 sm:text-sm">{emp.position} · {emp.department}</p>
+              <span className={`mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase sm:text-xs ${STATUS_CHIP[emp.online_status || 'offline']}`}>
                 <span className={`h-2 w-2 rounded-full ${STATUS_DOT[emp.online_status || 'offline']}`} />
                 {STATUS_LABEL[emp.online_status || 'offline']}
               </span>
@@ -598,38 +598,37 @@ export default function ManagerDashboard({ onOpenEmployeeChat }) {
                       <span className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-slate-900 ${STATUS_DOT[status]}`} />
                     </div>
                     <div>
-                      <p className="font-bold text-white">{emp.full_name}</p>
-                      <p className="mt-0.5 text-sm text-slate-400">{emp.position} · {emp.department}</p>
+                      <p className="text-base font-bold text-white sm:text-lg">{emp.full_name}</p>
+                      <p className="mt-0.5 text-xs text-slate-400 sm:text-sm">{emp.position} · {emp.department}</p>
                       {emp.current_task && status !== 'offline' && (
-                        <p className="mt-0.5 max-w-xs truncate text-xs text-slate-500">{emp.current_task}</p>
+                        <p className="mt-1 max-w-[200px] truncate text-[10px] font-medium text-slate-500 sm:max-w-xs sm:text-xs">
+                          {emp.current_task}
+                        </p>
                       )}
                     </div>
                   </button>
 
                   {/* Правая часть — метрики и кнопки */}
-                  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                    <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ring-1 ${STATUS_CHIP[status]}`}>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase sm:text-xs ${STATUS_CHIP[status]}`}>
                       <span className={`h-2 w-2 rounded-full ${STATUS_DOT[status]}`} />
                       {STATUS_LABEL[status]}
                     </span>
-                    <span className="text-sm text-slate-400">
+                    <span className="text-[11px] font-bold text-slate-400 sm:text-sm">
                       Отпуск: <b className={emp.vacation_remaining < 7 ? 'text-yellow-300' : 'text-white'}>
                         {pluralDays(emp.vacation_remaining)}
                       </b>
                     </span>
-                    {emp.birth_date && age && (
-                      <span className="text-sm text-slate-400">
-                        ДР: <b className="text-white">{formatBirthDate(emp.birth_date)}</b>
-                      </span>
-                    )}
-                    <button onClick={() => setGoalsEmployee(emp)}
-                      className="inline-flex items-center gap-1 rounded-xl bg-purple-600/15 px-3 py-1.5 text-xs font-semibold text-purple-200 ring-1 ring-purple-400/20 hover:bg-purple-600/25 transition">
-                      <Target size={12} />Цели
-                    </button>
-                    <button onClick={() => { onOpenEmployeeChat(emp.email); }}
-                      className="inline-flex items-center gap-1 rounded-xl bg-slate-700/60 px-3 py-1.5 text-xs font-semibold text-slate-200 ring-1 ring-slate-600/40 hover:bg-slate-600/60 transition">
-                      <MessageCircle size={12} />Написать
-                    </button>
+                    <div className="mt-1 flex w-full gap-2 sm:mt-0 sm:w-auto">
+                      <button onClick={() => setGoalsEmployee(emp)}
+                        className="flex-1 items-center justify-center gap-1 rounded-xl bg-purple-600/15 px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-purple-200 ring-1 ring-purple-400/20 sm:flex sm:flex-none sm:py-1.5 sm:normal-case sm:tracking-normal">
+                        <Target size={14} className="hidden sm:block" />Цели
+                      </button>
+                      <button onClick={() => { onOpenEmployeeChat(emp.email); }}
+                        className="flex-1 items-center justify-center gap-1 rounded-xl bg-slate-700/60 px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-200 ring-1 ring-slate-600/40 sm:flex sm:flex-none sm:py-1.5 sm:normal-case sm:tracking-normal">
+                        <MessageCircle size={14} className="hidden sm:block" />Чат
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

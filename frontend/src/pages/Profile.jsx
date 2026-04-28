@@ -36,7 +36,7 @@ export default function Profile({ profile }) {
         </div>
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-2 xl:grid-cols-4">
         <Card>
           <UserRound className="text-slate-400" />
           <p className="metric-label mt-4">Должность</p>

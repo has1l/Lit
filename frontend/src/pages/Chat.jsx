@@ -422,7 +422,7 @@ export default function Chat({
   // ── UI: peer-чат ──────────────────────────────────────────────────────────
   if (chatMode === 'peer' && selectedContact) {
     return (
-      <div className="mx-auto flex h-[calc(100vh-9.5rem)] max-w-4xl flex-col lg:h-[calc(100vh-8rem)]">
+      <div className="mx-auto flex h-[calc(100dvh-12rem)] max-w-4xl flex-col sm:h-[calc(100vh-9.5rem)] lg:h-[calc(100vh-8rem)]">
         <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="flex items-center gap-3">
             <div className="icon-tile h-11 w-11 shrink-0 rounded-2xl text-sm font-bold">
@@ -455,7 +455,7 @@ export default function Chat({
               return (
                 <div key={msg.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
                   <div
-                    className={`max-w-[82%] rounded-[24px] px-5 py-3 text-sm leading-6 sm:max-w-[70%] ${
+                    className={`max-w-[92%] rounded-[22px] px-4 py-2.5 text-sm leading-6 sm:max-w-[70%] sm:px-5 sm:py-3 ${
                       isOwn
                         ? 'chat-bubble-user'
                         : 'chat-bubble-peer'
@@ -498,14 +498,16 @@ export default function Chat({
   const mascotState = isThinking ? 'thinking' : (lastAssistant?.state || 'idle');
 
   return (
-    <div className="mx-auto flex h-[calc(100vh-9.5rem)] max-w-4xl flex-col lg:h-[calc(100vh-8rem)]">
+    <div className="mx-auto flex h-[calc(100dvh-11rem)] max-w-4xl flex-col sm:h-[calc(100vh-9.5rem)] lg:h-[calc(100vh-8rem)]">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Mascot state={mascotState} size="lg" variant="support" />
+          <div className="hidden sm:block">
+            <Mascot state={mascotState} size="lg" variant="support" />
+          </div>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-white">Чат с Техной</h1>
-            <p className="mt-1 text-slate-400">
-              {isThinking ? 'Ищу ответ в регламентах…' : 'Задайте вопрос или выберите готовый сценарий'}
+            <h1 className="text-xl font-bold tracking-tight text-white sm:text-3xl">Чат с Техной</h1>
+            <p className="mt-1 text-xs text-slate-400 sm:text-sm">
+              {isThinking ? 'Ищу ответ в регламентах…' : 'Задайте вопрос или выберите сценарий'}
             </p>
           </div>
         </div>
@@ -550,9 +552,9 @@ export default function Chat({
                     <Mascot state={message.state || 'idle'} size="sm" variant="support" />
                   </div>
                 )}
-                <div className={`max-w-[82%] sm:max-w-[70%] ${isUser ? '' : 'space-y-3'}`}>
+                <div className={`max-w-[92%] sm:max-w-[70%] ${isUser ? '' : 'space-y-3'}`}>
                   <div
-                    className={`rounded-[24px] px-5 py-3 text-sm leading-6 ${
+                    className={`rounded-[22px] px-4 py-2.5 text-sm leading-6 sm:px-5 sm:py-3 ${
                       isUser
                         ? 'chat-bubble-user'
                         : message.state === 'error'

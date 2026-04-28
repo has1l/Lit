@@ -77,10 +77,13 @@ export default function Layout({
 
       {/* ─── Content + topbar ────────────────────────────────────── */}
       <div className="flex min-h-screen flex-1 flex-col lg:pl-72">
-        <header className="fintech-topbar sticky top-0 z-20 border-b px-4 py-4 sm:px-6 lg:px-8">
+        <header className="fintech-topbar sticky top-0 z-20 border-b px-3 py-3 sm:px-6 lg:px-8">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
             <div className="lg:hidden">
-              <Brand />
+              <div className="flex items-center gap-2">
+                <Mascot state="idle" size="sm" />
+                <p className="text-lg font-bold text-white">Техна</p>
+              </div>
             </div>
             <div className="hidden lg:block">
               <p className="text-sm text-slate-400">
@@ -136,7 +139,7 @@ export default function Layout({
 
       {/* ─── Mobile bottom-nav ───────────────────────────────────── */}
       <nav className="fintech-mobile-nav fixed inset-x-0 bottom-0 z-40 border-t px-2 py-2 shadow-[0_-10px_35px_rgba(0,0,0,0.18)] lg:hidden">
-        <div className="no-scrollbar mx-auto flex max-w-md gap-1 overflow-x-auto">
+        <div className="no-scrollbar mx-auto flex max-w-md gap-0.5 overflow-x-auto pb-1">
           {visibleNavItems.filter((item) => !item.divider).map((item) => {
             const Icon = item.icon;
             const isActive = activePage === item.id;
@@ -145,11 +148,11 @@ export default function Layout({
                 key={item.id}
                 onClick={() => setActivePage(item.id)}
                 data-tour={viewMode === 'employee' ? `employee-nav-${item.id}` : undefined}
-                className={`fintech-nav-item flex min-w-[4.5rem] flex-col items-center gap-1 rounded-2xl px-2 py-2 text-xs font-semibold ${
-                  isActive ? 'fintech-nav-active' : ''
+                className={`fintech-nav-item flex min-w-[4.25rem] flex-1 flex-col items-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-bold uppercase tracking-wider transition-all duration-200 ${
+                  isActive ? 'fintech-nav-active' : 'opacity-70'
                 }`}
               >
-                <Icon size={21} />
+                <Icon size={isActive ? 22 : 20} className="transition-transform duration-200" />
                 {item.label}
               </button>
             );

@@ -23,7 +23,7 @@ export default function Vacation({ openChatWithPrompt }) {
         <p className="mt-2 text-slate-400">Баланс дней и история отпусков.</p>
       </div>
 
-      <div className="grid gap-5 md:grid-cols-2">
+      <div className="grid gap-5 sm:grid-cols-2">
         <Card>
           <div className="icon-tile h-12 w-12 rounded-2xl">
             <CalendarDays size={24} />

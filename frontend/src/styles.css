@@ -602,3 +602,52 @@
   .token-fresh { color: #ffffff; }
   .theme-light .token-fresh { color: #050505; }
 }
+
+/* ───── Mobile Optimization ──────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  :root {
+    --shadow-card: 0 12px 30px rgba(0, 0, 0, 0.20);
+  }
+
+  body {
+    font-size: 14px;
+  }
+
+  .fintech-surface, .metric-card {
+    padding: 1rem !important;
+  }
+
+  h1 { font-size: 1.5rem !important; }
+  h2 { font-size: 1.25rem !important; }
+
+  .chat-bubble-user, .chat-bubble-peer {
+    max-width: 90% !important;
+    padding: 0.75rem 1rem !important;
+    border-radius: 20px !important;
+  }
+
+  .assistant-chat-card {
+    padding: 1.25rem !important;
+  }
+
+  .fintech-mobile-nav {
+    padding-bottom: env(safe-area-inset-bottom, 1rem);
+  }
+
+  .fintech-input {
+    min-height: 44px;
+    font-size: 16px !important; /* Prevent iOS zoom on focus */
+  }
+
+  .status-chip {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+    font-size: 11px !important;
+  }
+}
+
+@media (max-width: 400px) {
+  .metric-value {
+    font-size: 1.75rem !important;
+  }
+}

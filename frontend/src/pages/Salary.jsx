@@ -77,7 +77,7 @@ export default function Salary() {
         <p className="text-sm text-red-400">Не удалось загрузить данные о выплатах</p>
       ) : (
         <div className="space-y-5">
-          <div className="grid gap-5 md:grid-cols-2">
+          <div className="grid gap-5 sm:grid-cols-2">
             <PaymentCard payment={advance} />
             <PaymentCard payment={salary} />
           </div>

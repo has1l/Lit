@@ -544,11 +544,17 @@ def _compute_badges(streak: int, bonus_records: list) -> list:
 
 # ── Pydantic-схемы геймификации ───────────────────────────────────────────────
 
+_DIFFICULTY_WEIGHT = {"easy": 5, "medium": 15, "hard": 30}
+_MIN_DAY_WEIGHT    = 20
+_DIFFICULTY_POINTS = {"easy": 10, "medium": 20, "hard": 35}
+
+
 class CreateGoalBody(BaseModel):
     employee_email: str
     title: str
     description: str = ""
     points: int = 10
+    difficulty: str = "medium"
     month: int
     year: int
 
@@ -557,6 +563,7 @@ class UpdateGoalBody(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     points: Optional[int] = None
+    difficulty: Optional[str] = None
 
 
 class SelectDailyBody(BaseModel):
@@ -625,9 +632,11 @@ def create_goal(body: CreateGoalBody, current_user: Annotated[UserContext, Depen
             ).fetchall()}
             if body.employee_email not in allowed:
                 raise HTTPException(status_code=403, detail="Сотрудник не в вашей команде")
+        difficulty = body.difficulty if body.difficulty in _DIFFICULTY_WEIGHT else "medium"
+        points = body.points if body.points else _DIFFICULTY_POINTS[difficulty]
         cur = conn.execute(
-            "INSERT INTO goals (employee_email,created_by,title,description,points,month,year) VALUES (?,?,?,?,?,?,?)",
-            (body.employee_email, current_user.email, body.title, body.description, body.points, body.month, body.year),
+            "INSERT INTO goals (employee_email,created_by,title,description,points,difficulty,month,year) VALUES (?,?,?,?,?,?,?,?)",
+            (body.employee_email, current_user.email, body.title, body.description, points, difficulty, body.month, body.year),
         )
         conn.commit()
         return dict(conn.execute("SELECT * FROM goals WHERE id=?", (cur.lastrowid,)).fetchone())
@@ -653,6 +662,8 @@ def update_goal(goal_id: int, body: UpdateGoalBody, current_user: Annotated[User
             updates.append("description=?"); vals.append(body.description)
         if body.points is not None:
             updates.append("points=?"); vals.append(body.points)
+        if body.difficulty is not None and body.difficulty in _DIFFICULTY_WEIGHT:
+            updates.append("difficulty=?"); vals.append(body.difficulty)
         if updates:
             vals.append(goal_id)
             conn.execute(f"UPDATE goals SET {', '.join(updates)} WHERE id=?", vals)
@@ -689,7 +700,7 @@ def get_daily_tasks(
     try:
         rows = conn.execute(
             "SELECT ds.id, ds.goal_id, ds.date, ds.completed, ds.completed_at, "
-            "g.title, g.description, g.points FROM daily_selections ds "
+            "g.title, g.description, g.points, g.difficulty FROM daily_selections ds "
             "JOIN goals g ON ds.goal_id=g.id "
             "WHERE ds.employee_email=? AND ds.date=?",
             (current_user.email, today),
