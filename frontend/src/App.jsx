@@ -8,6 +8,7 @@ import Chat from './pages/Chat.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Documents from './pages/Documents.jsx';
 import Goals from './pages/Goals.jsx';
+import Store from './pages/Store.jsx';
 import ManagerDashboard from './pages/ManagerDashboard.jsx';
 import Profile from './pages/Profile.jsx';
 import Salary from './pages/Salary.jsx';
@@ -78,6 +79,7 @@ function Workspace({ authUser, theme, setTheme }) {
   const employeePages = {
     dashboard: <Dashboard openChatWithPrompt={openChatWithPrompt} navigate={setActivePage} profile={profile} />,
     goals:     <Goals />,
+    store:     <Store />,
     chat: (
       <Chat
         draftPrompt={draftPrompt}
@@ -101,7 +103,8 @@ function Workspace({ authUser, theme, setTheme }) {
   };
 
   const managerPages = {
-    team: <ManagerDashboard onOpenEmployeeChat={openEmployeeChat} />,
+    team:  <ManagerDashboard onOpenEmployeeChat={openEmployeeChat} />,
+    store: <Store />,
     chat: (
       <Chat
         draftPrompt=""

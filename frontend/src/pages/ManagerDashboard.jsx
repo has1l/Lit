@@ -198,13 +198,14 @@ function GoalsModal({ employee, onClose }) {
   const now = new Date();
   const [goals, setGoals]       = useState([]);
   const [loading, setLoading]   = useState(true);
-  const [newTitle, setNewTitle] = useState('');
-  const [newDesc, setNewDesc]   = useState('');
-  const [newPoints, setNewPoints] = useState(20);
+  const [newTitle, setNewTitle]     = useState('');
+  const [newDesc, setNewDesc]       = useState('');
+  const [newPoints, setNewPoints]   = useState(20);
+  const [newDiff, setNewDiff]       = useState('medium');
   const [addingGoal, setAddingGoal] = useState(false);
-  const [draftGoals, setDraftGoals] = useState([{ title: '', description: '' }]);
+  const [draftGoals, setDraftGoals] = useState([{ title: '', description: '', difficulty: 'medium' }]);
   const [suggesting, setSuggesting] = useState(false);
-  const [showBulk, setShowBulk]   = useState(false);
+  const [showBulk, setShowBulk]     = useState(false);
 
   useEffect(() => {
     fetchGoals({ employee_email: employee.email })
@@ -216,9 +217,10 @@ function GoalsModal({ employee, onClose }) {
     const created = await createGoal({
       employee_email: employee.email,
       title: newTitle.trim(), description: newDesc.trim(),
-      points: Number(newPoints), month: now.getMonth() + 1, year: now.getFullYear(),
+      points: Number(newPoints), difficulty: newDiff,
+      month: now.getMonth() + 1, year: now.getFullYear(),
     }).catch(() => null);
-    if (created) { setGoals((p) => [...p, created]); setNewTitle(''); setNewDesc(''); setNewPoints(20); setAddingGoal(false); }
+    if (created) { setGoals((p) => [...p, created]); setNewTitle(''); setNewDesc(''); setNewPoints(20); setNewDiff('medium'); setAddingGoal(false); }
   }
 
   async function handleDelete(id) {
@@ -246,6 +248,7 @@ function GoalsModal({ employee, onClose }) {
     const created = await Promise.all(valid.map((g) => createGoal({
       employee_email: employee.email, title: g.title.trim(),
       description: g.description?.trim() ?? '', points: g.suggestedPoints ?? 20,
+      difficulty: g.difficulty || 'medium',
       month: now.getMonth() + 1, year: now.getFullYear(),
     }))).catch(() => []);
     setGoals((p) => [...p, ...created]);
@@ -271,18 +274,25 @@ function GoalsModal({ employee, onClose }) {
             {goals.length === 0 && !showBulk && !addingGoal && (
               <p className="text-sm text-slate-500">Целей на этот месяц нет. Добавьте их ниже.</p>
             )}
-            {goals.map((g) => (
-              <div key={g.id} className="flex items-start gap-3 rounded-2xl border border-slate-700 bg-slate-950/45 p-4">
-                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-purple-500/10 text-xs font-bold text-purple-300 ring-1 ring-purple-400/20">{g.points}</div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-white">{g.title}</p>
-                  {g.description && <p className="mt-1 text-sm text-slate-500">{g.description}</p>}
+            {goals.map((g) => {
+              const diffMeta = { hard: { lbl: 'Сложная', cls: 'text-red-300 bg-red-500/10 ring-red-400/20' }, medium: { lbl: 'Средняя', cls: 'text-yellow-300 bg-yellow-500/10 ring-yellow-400/20' }, easy: { lbl: 'Лёгкая', cls: 'text-green-300 bg-green-500/10 ring-green-400/20' } };
+              const dm = diffMeta[g.difficulty] || diffMeta.medium;
+              return (
+                <div key={g.id} className="flex items-start gap-3 rounded-2xl border border-slate-700 bg-slate-950/45 p-4">
+                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-purple-500/10 text-xs font-bold text-purple-300 ring-1 ring-purple-400/20">{g.points}</div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-semibold text-white">{g.title}</p>
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-bold ring-1 ${dm.cls}`}>{dm.lbl}</span>
+                    </div>
+                    {g.description && <p className="mt-1 text-sm text-slate-500">{g.description}</p>}
+                  </div>
+                  <button onClick={() => handleDelete(g.id)} className="grid h-8 w-8 shrink-0 place-items-center rounded-xl text-slate-600 hover:bg-red-500/10 hover:text-red-400 transition">
+                    <Trash2 size={15} />
+                  </button>
                 </div>
-                <button onClick={() => handleDelete(g.id)} className="grid h-8 w-8 shrink-0 place-items-center rounded-xl text-slate-600 hover:bg-red-500/10 hover:text-red-400 transition">
-                  <Trash2 size={15} />
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
@@ -292,10 +302,17 @@ function GoalsModal({ employee, onClose }) {
               className="w-full rounded-xl border border-slate-700 bg-slate-950/70 px-3 py-2 text-white outline-none placeholder:text-slate-500 focus:border-purple-500" />
             <input value={newDesc} onChange={(e) => setNewDesc(e.target.value)} placeholder="Описание (необязательно)"
               className="w-full rounded-xl border border-slate-700 bg-slate-950/70 px-3 py-2 text-white outline-none placeholder:text-slate-500 focus:border-purple-500" />
-            <div className="flex items-center gap-3">
-              <label className="text-sm text-slate-400">Баллы:</label>
-              <input type="number" min={10} max={100} value={newPoints} onChange={(e) => setNewPoints(e.target.value)}
-                className="w-24 rounded-xl border border-slate-700 bg-slate-950/70 px-3 py-2 text-white outline-none focus:border-purple-500" />
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="text-sm text-slate-400">Сложность:</label>
+              {[['easy','Лёгкая','text-green-300 ring-green-400/30'],['medium','Средняя','text-yellow-300 ring-yellow-400/30'],['hard','Сложная','text-red-300 ring-red-400/30']].map(([val, lbl, cls]) => (
+                <button key={val} type="button" onClick={() => setNewDiff(val)}
+                  className={`rounded-xl px-3 py-1.5 text-xs font-bold ring-1 transition ${cls} ${newDiff === val ? 'bg-slate-700' : 'bg-slate-950/50 opacity-50 hover:opacity-80'}`}>
+                  {lbl}
+                </button>
+              ))}
+              <label className="ml-2 text-sm text-slate-400">Баллы:</label>
+              <input type="number" min={5} max={100} value={newPoints} onChange={(e) => setNewPoints(e.target.value)}
+                className="w-20 rounded-xl border border-slate-700 bg-slate-950/70 px-3 py-2 text-white outline-none focus:border-purple-500" />
               <div className="flex gap-2 ml-auto">
                 <Button variant="secondary" className="px-3 py-2 text-sm" onClick={() => setAddingGoal(false)}>Отмена</Button>
                 <Button className="px-3 py-2 text-sm" onClick={handleAdd}>Добавить</Button>
@@ -308,10 +325,18 @@ function GoalsModal({ employee, onClose }) {
           <div className="mt-4 space-y-3 rounded-2xl border border-purple-400/20 bg-purple-600/5 p-4">
             <p className="text-sm font-semibold text-white">Цели на месяц — Техна распределит баллы</p>
             {draftGoals.map((g, i) => (
-              <div key={i} className="flex items-center gap-2">
+              <div key={i} className="flex flex-wrap items-center gap-2">
                 <input value={g.title} onChange={(e) => setDraftGoals((p) => p.map((d, j) => j === i ? { ...d, title: e.target.value } : d))}
                   placeholder={`Цель ${i + 1}`}
                   className="min-w-0 flex-1 rounded-xl border border-slate-700 bg-slate-950/70 px-3 py-2 text-white outline-none placeholder:text-slate-500 focus:border-purple-500" />
+                <div className="flex gap-1">
+                  {[['easy','Л','text-green-300'],['medium','С','text-yellow-300'],['hard','Т','text-red-300']].map(([val, lbl, cls]) => (
+                    <button key={val} type="button" onClick={() => setDraftGoals((p) => p.map((d, j) => j === i ? { ...d, difficulty: val } : d))}
+                      className={`rounded-lg px-2 py-1 text-xs font-bold transition ${cls} ${(g.difficulty||'medium') === val ? 'bg-slate-700' : 'opacity-30 hover:opacity-60'}`}>
+                      {lbl}
+                    </button>
+                  ))}
+                </div>
                 {g.suggestedPoints !== undefined && (
                   <span className="shrink-0 rounded-xl bg-purple-600/20 px-3 py-2 text-sm font-bold text-purple-200">{g.suggestedPoints} pts</span>
                 )}

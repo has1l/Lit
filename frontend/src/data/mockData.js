@@ -4,6 +4,7 @@ import {
   FileText,
   Home,
   MessageCircle,
+  ShoppingBag,
   Target,
   UserRound,
   WalletCards,
@@ -13,6 +14,7 @@ import {
 export const navItems = [
   { id: 'dashboard', label: 'Главная',    icon: Home },
   { id: 'goals',     label: 'Цели',       icon: Target },
+  { id: 'store',     label: 'Магазин',    icon: ShoppingBag },
   { id: 'chat',      label: 'Чат',        icon: MessageCircle },
   { id: 'vacation',  label: 'Отпуск',     icon: CalendarDays },
   { id: 'salary',    label: 'Зарплата',   icon: WalletCards },
@@ -23,6 +25,7 @@ export const navItems = [
 
 export const managerNavItems = [
   { id: 'team',      label: 'Команда',    icon: ClipboardList },
+  { id: 'store',     label: 'Магазин',    icon: ShoppingBag },
   { id: 'chat',      label: 'Чат',        icon: MessageCircle },
   { id: 'documents', label: 'Документы',  icon: FileText },
   { id: 'appeals',   label: 'Обращения',  icon: ClipboardList },

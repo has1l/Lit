@@ -6,17 +6,11 @@ import { fetchGoals } from '../api/goals.js';
 const MONTH_RU = ['', 'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
   'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
 
-function getDifficultyLabel(points) {
-  if (points >= 35) return 'Высокий приоритет';
-  if (points >= 20) return 'Средний приоритет';
-  return 'Базовая задача';
-}
-
-function getDifficultyClass(points) {
-  if (points >= 35) return 'goal-priority-badge is-high';
-  if (points >= 20) return 'goal-priority-badge is-medium';
-  return 'goal-priority-badge';
-}
+const DIFFICULTY_META = {
+  hard:   { label: 'Сложная',  cls: 'border-red-400/40 bg-red-500/10 text-red-300' },
+  medium: { label: 'Средняя',  cls: 'border-yellow-400/40 bg-yellow-500/10 text-yellow-300' },
+  easy:   { label: 'Лёгкая',   cls: 'border-green-400/40 bg-green-500/10 text-green-300' },
+};
 
 export default function Goals() {
   const [goals, setGoals] = useState([]);
@@ -25,7 +19,7 @@ export default function Goals() {
   const now = new Date();
   const activeGoals = useMemo(() => goals.filter((goal) => goal.status !== 'completed'), [goals]);
   const totalPoints = useMemo(() => goals.reduce((sum, goal) => sum + (goal.points || 0), 0), [goals]);
-  const priorityGoals = useMemo(() => goals.filter((goal) => (goal.points || 0) >= 35), [goals]);
+  const priorityGoals = useMemo(() => goals.filter((goal) => goal.difficulty === 'hard'), [goals]);
 
   useEffect(() => {
     fetchGoals()
@@ -130,9 +124,14 @@ export default function Goals() {
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="text-lg font-bold text-white">{goal.title}</h3>
-                        <span className={`rounded-full border px-3 py-1 text-xs font-bold ${getDifficultyClass(goal.points || 0)}`}>
-                          {getDifficultyLabel(goal.points || 0)}
-                        </span>
+                        {(() => {
+                          const d = DIFFICULTY_META[goal.difficulty] || DIFFICULTY_META.medium;
+                          return (
+                            <span className={`rounded-full border px-3 py-1 text-xs font-bold ${d.cls}`}>
+                              {d.label}
+                            </span>
+                          );
+                        })()}
                       </div>
                       {goal.description && (
                         <p className="mt-2 text-sm leading-6 text-slate-400">{goal.description}</p>

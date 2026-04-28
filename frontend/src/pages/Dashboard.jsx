@@ -376,31 +376,38 @@ export default function Dashboard({ openChatWithPrompt, navigate, profile }) {
                 <p className="mt-5 text-sm text-slate-500">Руководитель пока не назначил задачи на сегодня.</p>
               ) : (
                 <div className="mt-5 grid gap-3">
-                  {dailyTasks.map((task) => (
-                    <button key={task.id} type="button"
-                      onClick={() => toggleTask(task.id)}
-                      disabled={!!task.completed}
-                      className={`flex items-center gap-3 rounded-3xl border p-4 text-left transition ${
-                        task.completed
-                          ? 'border-purple-400/50 bg-purple-600/15 text-slate-300 cursor-default'
-                          : 'border-slate-700 bg-slate-950/45 text-slate-200 hover:border-purple-500/50 hover:bg-purple-950/25'
-                      }`}
-                    >
-                      <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-lg border transition ${
-                        task.completed
-                          ? 'border-purple-400 bg-purple-600 text-white'
-                          : 'border-slate-600 bg-slate-950/60 text-transparent'
-                      }`}>
-                        <Check size={16} />
-                      </span>
-                      <span className={`min-w-0 flex-1 font-semibold ${task.completed ? 'line-through decoration-purple-300/70' : ''}`}>
-                        {task.title}
-                      </span>
-                      <span className="shrink-0 rounded-xl bg-slate-800 px-2 py-1 text-xs font-bold text-purple-300">
-                        {task.points} pts
-                      </span>
-                    </button>
-                  ))}
+                  {dailyTasks.map((task) => {
+                    const diffColors = { easy: 'text-green-400', medium: 'text-yellow-300', hard: 'text-red-400' };
+                    const diffLabels = { easy: 'Лёгкая', medium: 'Средняя', hard: 'Сложная' };
+                    const dc = diffColors[task.difficulty] || 'text-slate-400';
+                    const dl = diffLabels[task.difficulty];
+                    return (
+                      <button key={task.id} type="button"
+                        onClick={() => toggleTask(task.id)}
+                        disabled={!!task.completed}
+                        className={`flex items-center gap-3 rounded-3xl border p-4 text-left transition ${
+                          task.completed
+                            ? 'border-purple-400/50 bg-purple-600/15 text-slate-300 cursor-default'
+                            : 'border-slate-700 bg-slate-950/45 text-slate-200 hover:border-purple-500/50 hover:bg-purple-950/25'
+                        }`}
+                      >
+                        <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-lg border transition ${
+                          task.completed
+                            ? 'border-purple-400 bg-purple-600 text-white'
+                            : 'border-slate-600 bg-slate-950/60 text-transparent'
+                        }`}>
+                          <Check size={16} />
+                        </span>
+                        <span className={`min-w-0 flex-1 font-semibold ${task.completed ? 'line-through decoration-purple-300/70' : ''}`}>
+                          {task.title}
+                        </span>
+                        {dl && <span className={`shrink-0 text-xs font-semibold ${dc}`}>{dl}</span>}
+                        <span className="shrink-0 rounded-xl bg-slate-800 px-2 py-1 text-xs font-bold text-purple-300">
+                          {task.points} pts
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
               <div className="mt-5 flex flex-wrap items-center gap-3">
@@ -432,6 +439,12 @@ export default function Dashboard({ openChatWithPrompt, navigate, profile }) {
                     <div className="flex items-center gap-2 text-yellow-300">
                       <Trophy size={16} />
                       <span className="font-bold">Бонус ×1.5 — все задачи выполнены! +{dayResult.points_earned} pts</span>
+                    </div>
+                  )}
+                  {dayResult.streak_bonus && (
+                    <div className="flex items-center gap-2 text-orange-300">
+                      <Trophy size={16} />
+                      <span className="font-bold">Стрик-бонус +20% — {dayResult.streak} дней подряд!</span>
                     </div>
                   )}
                   {!dayResult.bonus && !dayResult.penalty && dayResult.points_earned > 0 && (

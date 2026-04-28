@@ -66,7 +66,7 @@ export default function LoginScreen() {
         </div>
 
         {/* Правая колонка — форма */}
-        <Card className="flex flex-col justify-center gap-6 p-8 sm:p-10">
+        <Card className="flex flex-col justify-center gap-6 p-6 sm:p-10">
           <div className="lg:hidden">
             <Mascot state="idle" size="md" />
             <h1 className="mt-4 text-2xl font-bold text-white">Техна</h1>
@@ -131,17 +131,17 @@ export default function LoginScreen() {
                     setEmail(account.email);
                     setPassword(TEST_PASSWORD);
                   }}
-                  className={`flex items-center justify-between gap-3 rounded-2xl border px-3 py-2 text-left text-sm transition ${
+                  className={`flex flex-col gap-1 rounded-2xl border px-3 py-2.5 text-left text-sm transition sm:flex-row sm:items-center sm:justify-between sm:gap-3 ${
                     email === account.email
                       ? 'border-purple-500/60 bg-purple-600/10'
                       : 'data-row'
                   }`}
                 >
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold text-white">{account.name}</p>
-                    <p className="truncate text-xs text-slate-400">{account.email}</p>
+                    <p className="truncate text-[11px] text-slate-400 sm:text-xs">{account.email}</p>
                   </div>
-                  <span className="shrink-0 rounded-full bg-slate-950/60 px-2 py-1 text-[11px] font-semibold text-slate-300 ring-1 ring-slate-700">
+                  <span className="w-fit shrink-0 rounded-full bg-slate-950/60 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-300 ring-1 ring-slate-700 sm:text-[11px]">
                     {account.role}
                   </span>
                 </button>
