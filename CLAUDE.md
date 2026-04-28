@@ -14,6 +14,11 @@
 
 Vite проксирует `/api/*` → `http://127.0.0.1:8000` (без `/api` префикса).
 
+## Git
+
+Репозиторий: https://github.com/has1l/Lit  
+`.gitignore` исключает: `__pycache__`, `.DS_Store`, `chroma_db/`, `hr.db`, `node_modules/`, Xcode xcuserstate.
+
 ## Структура
 
 ```
@@ -23,8 +28,7 @@ LIT/
 │   ├── auth.py          # JWT, MOCK_USERS, get_current_user()
 │   ├── agent.py         # pipeline agent (quick_answer → RAG → LLM)
 │   ├── database.py      # SQLite init, get_connection()
-│   ├── ingest.py        # ChromaDB ingestion из ПВТР
-│   └── hr.db            # SQLite файл
+│   └── ingest.py        # ChromaDB ingestion из ПВТР
 └── frontend/
     ├── vite.config.js   # proxy /api → :8000
     ├── tailwind.config.js  # brand tokens
@@ -33,15 +37,19 @@ LIT/
         │   ├── client.js      # apiFetch(), tokenStore
         │   ├── auth.js        # login(), getMe()
         │   ├── chat.js        # sendMessage()
-        │   └── employee.js    # fetchMyData()
+        │   ├── employee.js    # fetchMyData()
+        │   └── messages.js    # fetchContacts(), fetchMessages(), postMessage()
         ├── hooks/
         │   └── useEmployeeData.js  # useEffect wrapper для /me/data
         ├── store/
         │   └── AuthContext.jsx  # user, status, login, logout
         ├── lib/
-        │   └── displayUser.js  # displayUser(), defaultViewMode()
+        │   ├── displayUser.js  # displayUser(), defaultViewMode()
+        │   └── format.js       # formatDay(), formatFull(), formatAmount(), paymentTypeRu(), pluralDays()
         ├── components/
-        │   ├── Mascot.jsx      # 5 состояний: idle/thinking/success/empty/error
+        │   ├── Mascot.jsx              # 5 состояний: idle/thinking/success/empty/error
+        │   ├── GlassCard.jsx           # glass-морфизм карточка (backdrop-blur + градиент)
+        │   ├── LiquidGlassBackground.jsx  # ambient blur-блобы (используй осторожно)
         │   ├── LoginScreen.jsx
         │   ├── Layout.jsx
         │   ├── Button.jsx
@@ -49,11 +57,13 @@ LIT/
         ├── pages/
         │   ├── Chat.jsx
         │   ├── Dashboard.jsx
-        │   ├── Vacation.jsx    # реальные данные из /me/data
-        │   ├── Salary.jsx      # реальные данные из /me/data
+        │   ├── Vacation.jsx      # реальные данные из /me/data
+        │   ├── Salary.jsx        # реальные данные из /me/data, плоские карточки (без GlassCard)
         │   ├── Profile.jsx
         │   ├── ManagerDashboard.jsx
-        │   └── ...
+        │   ├── Appeals.jsx
+        │   ├── Documents.jsx
+        │   └── Questions.jsx
         ├── data/mockData.js    # навигация, статичные данные (не HR-данные)
         └── App.jsx             # роутинг: loading → LoginScreen → Workspace
 ```
@@ -68,6 +78,10 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 # Frontend
 cd frontend && npm install && npm run dev
 ```
+
+API-документация доступна автоматически:
+- Swagger UI: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
 
 ## Демо-аккаунты (все с одним паролем)
 
@@ -84,6 +98,11 @@ cd frontend && npm install && npm run dev
 - `hr` → viewMode `manager` (те же права, что manager в UI)
 
 RLS в Python (не в LLM): каждый SQL-запрос в agent.py оборачивается в CTE с фильтром по `employee_email`. **Контракт**: каждый SQL-запрос в `_fetch_employee_facts()` обязан возвращать колонки `employee_email` и `department`.
+
+Мессенджер RBAC:
+- `employee` — может писать только своему руководителю
+- `manager` — только своим прямым подчинённым
+- `hr` — всем сотрудникам
 
 ## Agent pipeline
 
@@ -106,6 +125,10 @@ run_agent()
 | GET | `/auth/me` | профиль из токена |
 | GET | `/me/data` | отпуск + выплаты текущего пользователя |
 | POST | `/chat` | сообщение агенту |
+| GET | `/team/employees` | список команды (manager/hr) |
+| GET | `/messages/contacts` | контакты с превью и счётчиком непрочитанных |
+| GET | `/messages?with_email=` | диалог с пользователем (последние 100) |
+| POST | `/messages` | отправить личное сообщение |
 | GET | `/health` | проверка сервера |
 
 ## Дизайн-система
@@ -119,11 +142,14 @@ Tailwind переопределён в `tailwind.config.js`:
 
 Никогда не вводить произвольные hex в JSX — только классы Tailwind.
 
+`GlassCard` — компонент с glass-морфизмом (backdrop-blur-3xl + градиентная рамка). Используется на большинстве страниц. На странице `Salary.jsx` намеренно заменён на плоский `Card` (`bg-slate-800`).
+
 ## БД — таблицы
 
 - `employees` — профиль (email, full_name, department, position, manager_email, salary, hire_date)
 - `leave_balances` — отпуск (employee_email, year, total_days, used_days, pending_days)
 - `salary_payments` — выплаты (employee_email, payment_date, payment_type, amount, status)
+- `messages` — личные сообщения (id, from_email, to_email, text, created_at, is_read)
 
 Тестовые данные: апрель 2026 (paid) + май 2026 (planned), отпуск за 2025 и 2026.
 
