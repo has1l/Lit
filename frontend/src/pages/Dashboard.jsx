@@ -8,6 +8,7 @@ import {
   fetchGoals, fetchDailyTasks, selectDailyTasks,
   completeDailyTask, finishDay, fetchGamificationStats,
 } from '../api/goals.js';
+import { updateMyStatus } from '../api/employee.js';
 
 const RECOMMENDATION_DEFS = [
   { id: 1, type: 'vacation' },
@@ -162,15 +163,16 @@ export default function Dashboard({ openChatWithPrompt, navigate, profile }) {
       setDayDate(today);
       setStatus('work');
       setSelectMode(false);
+      updateMyStatus('online', tasks[0]?.title || '').catch(() => {});
     } catch (e) {
       if (e?.status === 409) {
-        // задачи уже выбраны (race) — просто перезагружаем
         const tasks = await fetchDailyTasks(today);
         setDailyTasks(tasks);
         setDayStarted(true);
         setDayDate(today);
         setStatus('work');
         setSelectMode(false);
+        updateMyStatus('online', tasks[0]?.title || '').catch(() => {});
       }
     }
   }
@@ -198,7 +200,6 @@ export default function Dashboard({ openChatWithPrompt, navigate, profile }) {
     try {
       const result = await finishDay(today);
       setDayResult(result);
-      // Обновляем статы
       fetchGamificationStats().then(setGameStats).catch(() => {});
     } catch {}
     setDailyReports((prev) => [{
@@ -210,6 +211,7 @@ export default function Dashboard({ openChatWithPrompt, navigate, profile }) {
     setDayCompleted(true);
     setStatus('offline');
     setShowModal(false);
+    updateMyStatus('offline', '').catch(() => {});
   }
 
   function startNewDay() {
@@ -370,7 +372,7 @@ export default function Dashboard({ openChatWithPrompt, navigate, profile }) {
                     <button
                       key={s}
                       type="button"
-                      onClick={() => { setStatus(s); setStatusOpen(false); }}
+                      onClick={() => { setStatus(s); setStatusOpen(false); updateMyStatus(s === 'break' ? 'break' : 'online', '').catch(() => {}); }}
                       className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-200 transition hover:bg-indigo-500/10"
                     >
                       <span className={`h-2.5 w-2.5 rounded-full ${statusOptions[s].dot}`} />

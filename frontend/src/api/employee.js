@@ -7,3 +7,18 @@ export function fetchMyData() {
 export function fetchTeamEmployees() {
   return apiFetch('/team/employees');
 }
+
+export function fetchTeamStatuses() {
+  return apiFetch('/team/statuses');
+}
+
+export function fetchEmployeeProfile(email) {
+  return apiFetch(`/employees/${encodeURIComponent(email)}`);
+}
+
+export function updateMyStatus(status, currentTask = '') {
+  return apiFetch('/me/status', {
+    method: 'PUT',
+    body: JSON.stringify({ status, current_task: currentTask }),
+  });
+}

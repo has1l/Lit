@@ -15,7 +15,9 @@
 from datetime import datetime
 from typing import Annotated, Optional
 
-from fastapi import Depends, FastAPI, HTTPException
+from pathlib import Path
+
+from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -65,10 +67,11 @@ class ChatRequest(BaseModel):
 
 
 class ChatResponse(BaseModel):
-    answer:  str
-    sources: list[str]
-    steps:   int
-    user:    str       # имя пользователя для отображения в UI
+    answer:   str
+    sources:  list[str]
+    steps:    int
+    user:     str
+    escalate: bool = False
 
 
 # ── Маршруты ──────────────────────────────────────────────────────────────────
@@ -103,42 +106,37 @@ async def chat(
         sources=result["sources"],
         steps=result["steps"],
         user=current_user.name,
+        escalate=result.get("escalate", False),
     )
 
 
 @app.get("/team/employees")
 def get_team_employees(current_user: Annotated[UserContext, Depends(get_current_user)]):
-    """
-    Список сотрудников команды.
-    manager — только прямые подчинённые (manager_email = текущий пользователь).
-    hr      — все сотрудники компании.
-    """
+    """Список сотрудников команды с расширенными полями (статус, ДР, пол)."""
     if current_user.role not in ("manager", "hr"):
         raise HTTPException(status_code=403, detail="Нет доступа")
 
     conn = get_connection()
     try:
         year = datetime.now().year
-
+        base_sql = (
+            "SELECT e.email, e.full_name, e.department, e.position, e.hire_date, "
+            "       e.birth_date, e.gender, e.salary, e.avatar_color, "
+            "       lb.total_days, lb.used_days, lb.pending_days, "
+            "       COALESCE(es.status, 'offline') AS online_status, "
+            "       COALESCE(es.current_task, '') AS current_task, "
+            "       es.updated_at AS status_updated_at "
+            "FROM employees e "
+            "LEFT JOIN leave_balances lb ON lb.employee_email = e.email AND lb.year = ? "
+            "LEFT JOIN employee_status es ON es.employee_email = e.email "
+        )
         if current_user.role == "hr":
             rows = conn.execute(
-                "SELECT e.email, e.full_name, e.department, e.position, e.hire_date, "
-                "       lb.total_days, lb.used_days, lb.pending_days "
-                "FROM employees e "
-                "LEFT JOIN leave_balances lb "
-                "       ON lb.employee_email = e.email AND lb.year = ? "
-                "ORDER BY e.department, e.full_name",
-                (year,),
+                base_sql + "ORDER BY e.department, e.full_name", (year,)
             ).fetchall()
         else:
             rows = conn.execute(
-                "SELECT e.email, e.full_name, e.department, e.position, e.hire_date, "
-                "       lb.total_days, lb.used_days, lb.pending_days "
-                "FROM employees e "
-                "LEFT JOIN leave_balances lb "
-                "       ON lb.employee_email = e.email AND lb.year = ? "
-                "WHERE e.manager_email = ? "
-                "ORDER BY e.full_name",
+                base_sql + "WHERE e.manager_email = ? ORDER BY e.full_name",
                 (year, current_user.email),
             ).fetchall()
 
@@ -148,17 +146,126 @@ def get_team_employees(current_user: Annotated[UserContext, Depends(get_current_
             used  = r["used_days"]  or 0
             pend  = r["pending_days"] or 0
             result.append({
-                "email":          r["email"],
-                "full_name":      r["full_name"],
-                "department":     r["department"],
-                "position":       r["position"],
-                "hire_date":      r["hire_date"],
+                "email":              r["email"],
+                "full_name":          r["full_name"],
+                "department":         r["department"],
+                "position":           r["position"],
+                "hire_date":          r["hire_date"],
+                "birth_date":         r["birth_date"],
+                "gender":             r["gender"],
+                "salary":             r["salary"],
+                "avatar_color":       r["avatar_color"],
                 "vacation_total":     total,
                 "vacation_used":      used,
                 "vacation_pending":   pend,
                 "vacation_remaining": total - used - pend,
+                "online_status":      r["online_status"],
+                "current_task":       r["current_task"],
+                "status_updated_at":  r["status_updated_at"],
             })
         return result
+    finally:
+        conn.close()
+
+
+@app.get("/team/statuses")
+def get_team_statuses(current_user: Annotated[UserContext, Depends(get_current_user)]):
+    """Быстрый поллинг статусов команды (только email + status + current_task)."""
+    if current_user.role not in ("manager", "hr"):
+        raise HTTPException(status_code=403, detail="Нет доступа")
+    conn = get_connection()
+    try:
+        if current_user.role == "hr":
+            rows = conn.execute(
+                "SELECT es.employee_email, es.status, es.current_task, es.updated_at "
+                "FROM employee_status es"
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT es.employee_email, es.status, es.current_task, es.updated_at "
+                "FROM employee_status es "
+                "JOIN employees e ON es.employee_email = e.email "
+                "WHERE e.manager_email = ?",
+                (current_user.email,),
+            ).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+@app.get("/employees/{employee_email}")
+def get_employee_profile(
+    employee_email: str,
+    current_user: Annotated[UserContext, Depends(get_current_user)],
+):
+    """Полный профиль сотрудника (RBAC: manager видит свою команду, hr — всех)."""
+    if current_user.role not in ("manager", "hr"):
+        raise HTTPException(status_code=403, detail="Нет доступа")
+    conn = get_connection()
+    try:
+        if current_user.role == "manager":
+            emp = conn.execute(
+                "SELECT * FROM employees WHERE email=? AND manager_email=?",
+                (employee_email, current_user.email),
+            ).fetchone()
+        else:
+            emp = conn.execute(
+                "SELECT * FROM employees WHERE email=?", (employee_email,)
+            ).fetchone()
+        if not emp:
+            raise HTTPException(status_code=404, detail="Сотрудник не найден")
+
+        year = datetime.now().year
+        leave = conn.execute(
+            "SELECT * FROM leave_balances WHERE employee_email=? AND year=?",
+            (employee_email, year),
+        ).fetchone()
+        recent_payments = conn.execute(
+            "SELECT * FROM salary_payments WHERE employee_email=? "
+            "ORDER BY payment_date DESC LIMIT 4",
+            (employee_email,),
+        ).fetchall()
+        status = conn.execute(
+            "SELECT * FROM employee_status WHERE employee_email=?",
+            (employee_email,),
+        ).fetchone()
+
+        result = dict(emp)
+        result["leave"] = dict(leave) if leave else None
+        result["recent_payments"] = [dict(r) for r in recent_payments]
+        result["online_status"] = dict(status) if status else {"status": "offline", "current_task": ""}
+        return result
+    finally:
+        conn.close()
+
+
+class UpdateStatusBody(BaseModel):
+    status:       str
+    current_task: str = ""
+
+
+@app.put("/me/status")
+def update_my_status(
+    body: UpdateStatusBody,
+    current_user: Annotated[UserContext, Depends(get_current_user)],
+):
+    """Обновить свой онлайн-статус и текущую задачу."""
+    if body.status not in ("online", "offline", "break"):
+        raise HTTPException(status_code=400, detail="status: online | offline | break")
+    conn = get_connection()
+    try:
+        now_str = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+        conn.execute(
+            """INSERT INTO employee_status (employee_email, status, current_task, updated_at)
+               VALUES (?, ?, ?, ?)
+               ON CONFLICT(employee_email) DO UPDATE SET
+                 status=excluded.status,
+                 current_task=excluded.current_task,
+                 updated_at=excluded.updated_at""",
+            (current_user.email, body.status, body.current_task.strip(), now_str),
+        )
+        conn.commit()
+        return {"ok": True, "status": body.status}
     finally:
         conn.close()
 
@@ -816,6 +923,224 @@ async def suggest_points(
         result = [{"index": i, "title": g["title"], "points": min(100, max(10, len(g["title"]) * 2))}
                   for i, g in enumerate(body.goals)]
         return {"suggestions": result, "fallback": True}
+
+
+# ── HR-тикеты (Appeals) ───────────────────────────────────────────────────────
+
+class CreateAppealBody(BaseModel):
+    question_text: str
+    category:      str = "other"
+
+
+class ResolveAppealBody(BaseModel):
+    hr_response: str
+
+
+class AssignAppealBody(BaseModel):
+    assignee_email: str
+
+
+@app.post("/appeals", status_code=201)
+def create_appeal(
+    body: CreateAppealBody,
+    current_user: Annotated[UserContext, Depends(get_current_user)],
+):
+    """Создать обращение в HR (любой авторизованный пользователь)."""
+    if not body.question_text.strip():
+        raise HTTPException(status_code=400, detail="Текст обращения не может быть пустым")
+    conn = get_connection()
+    try:
+        cur = conn.execute(
+            "INSERT INTO hr_appeals (from_email, question_text, category) VALUES (?,?,?)",
+            (current_user.email, body.question_text.strip(), body.category),
+        )
+        conn.commit()
+        row = conn.execute("SELECT * FROM hr_appeals WHERE id=?", (cur.lastrowid,)).fetchone()
+        return dict(row)
+    finally:
+        conn.close()
+
+
+@app.get("/appeals")
+def get_appeals(current_user: Annotated[UserContext, Depends(get_current_user)]):
+    """
+    Список обращений.
+    employee — только свои.
+    manager  — своей команды.
+    hr       — все.
+    """
+    conn = get_connection()
+    try:
+        if current_user.role == "employee":
+            rows = conn.execute(
+                "SELECT a.*, e.full_name AS from_name FROM hr_appeals a "
+                "JOIN employees e ON a.from_email = e.email "
+                "WHERE a.from_email = ? ORDER BY a.created_at DESC",
+                (current_user.email,),
+            ).fetchall()
+        elif current_user.role == "manager":
+            rows = conn.execute(
+                "SELECT a.*, e.full_name AS from_name FROM hr_appeals a "
+                "JOIN employees e ON a.from_email = e.email "
+                "WHERE e.manager_email = ? ORDER BY a.created_at DESC",
+                (current_user.email,),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT a.*, e.full_name AS from_name FROM hr_appeals a "
+                "JOIN employees e ON a.from_email = e.email "
+                "ORDER BY a.created_at DESC"
+            ).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+@app.patch("/appeals/{appeal_id}/resolve")
+def resolve_appeal(
+    appeal_id: int,
+    body: ResolveAppealBody,
+    current_user: Annotated[UserContext, Depends(get_current_user)],
+):
+    """HR закрывает тикет с ответом."""
+    if current_user.role != "hr":
+        raise HTTPException(status_code=403, detail="Нет доступа")
+    if not body.hr_response.strip():
+        raise HTTPException(status_code=400, detail="Ответ не может быть пустым")
+    conn = get_connection()
+    try:
+        row = conn.execute("SELECT * FROM hr_appeals WHERE id=?", (appeal_id,)).fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Обращение не найдено")
+        now_str = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+        conn.execute(
+            "UPDATE hr_appeals SET status='resolved', hr_response=?, "
+            "assigned_to=?, resolved_at=? WHERE id=?",
+            (body.hr_response.strip(), current_user.email, now_str, appeal_id),
+        )
+        conn.commit()
+        return dict(conn.execute("SELECT * FROM hr_appeals WHERE id=?", (appeal_id,)).fetchone())
+    finally:
+        conn.close()
+
+
+@app.patch("/appeals/{appeal_id}/assign")
+def assign_appeal(
+    appeal_id: int,
+    body: AssignAppealBody,
+    current_user: Annotated[UserContext, Depends(get_current_user)],
+):
+    """HR назначает ответственного и переводит в in_progress."""
+    if current_user.role != "hr":
+        raise HTTPException(status_code=403, detail="Нет доступа")
+    conn = get_connection()
+    try:
+        row = conn.execute("SELECT * FROM hr_appeals WHERE id=?", (appeal_id,)).fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Обращение не найдено")
+        conn.execute(
+            "UPDATE hr_appeals SET assigned_to=?, status='in_progress' WHERE id=?",
+            (body.assignee_email, appeal_id),
+        )
+        conn.commit()
+        return dict(conn.execute("SELECT * FROM hr_appeals WHERE id=?", (appeal_id,)).fetchone())
+    finally:
+        conn.close()
+
+
+# ── Документы (загрузка в RAG) ────────────────────────────────────────────────
+
+_ALLOWED_DOC_EXTS = {".pdf", ".docx", ".doc", ".xlsx", ".xls"}
+
+
+@app.post("/documents/upload", status_code=201)
+async def upload_document(
+    current_user: Annotated[UserContext, Depends(get_current_user)],
+    file: UploadFile = File(...),
+    audience: str = Form("all"),
+):
+    """Загрузить документ в базу знаний RAG (только hr и manager)."""
+    if current_user.role not in ("hr", "manager"):
+        raise HTTPException(status_code=403, detail="Нет доступа")
+    if audience not in ("all", "managers", "hr"):
+        raise HTTPException(status_code=400, detail="audience: all | managers | hr")
+
+    ext = Path(file.filename).suffix.lower()
+    if ext not in _ALLOWED_DOC_EXTS:
+        raise HTTPException(status_code=400, detail=f"Неподдерживаемый формат: {ext}. Допустимые: PDF, DOCX, XLSX")
+
+    file_bytes = await file.read()
+    if len(file_bytes) > 20 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Файл слишком большой (макс. 20 МБ)")
+
+    try:
+        from documents import ingest_document
+        chunk_count = ingest_document(file.filename, file_bytes, current_user.email, audience)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Ошибка обработки файла: {exc}")
+
+    conn = get_connection()
+    try:
+        cur = conn.execute(
+            "INSERT INTO uploaded_documents (filename, uploaded_by, audience, chunk_count) VALUES (?,?,?,?)",
+            (file.filename, current_user.email, audience, chunk_count),
+        )
+        conn.commit()
+        row = conn.execute("SELECT * FROM uploaded_documents WHERE id=?", (cur.lastrowid,)).fetchone()
+        return dict(row)
+    finally:
+        conn.close()
+
+
+@app.get("/documents")
+def get_documents(current_user: Annotated[UserContext, Depends(get_current_user)]):
+    """Список загруженных документов (фильтрация по роли через audience)."""
+    conn = get_connection()
+    try:
+        if current_user.role == "employee":
+            rows = conn.execute(
+                "SELECT d.*, e.full_name AS uploader_name FROM uploaded_documents d "
+                "LEFT JOIN employees e ON d.uploaded_by = e.email "
+                "WHERE d.audience = 'all' ORDER BY d.created_at DESC"
+            ).fetchall()
+        elif current_user.role == "manager":
+            rows = conn.execute(
+                "SELECT d.*, e.full_name AS uploader_name FROM uploaded_documents d "
+                "LEFT JOIN employees e ON d.uploaded_by = e.email "
+                "WHERE d.audience IN ('all', 'managers') ORDER BY d.created_at DESC"
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT d.*, e.full_name AS uploader_name FROM uploaded_documents d "
+                "LEFT JOIN employees e ON d.uploaded_by = e.email "
+                "ORDER BY d.created_at DESC"
+            ).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+@app.delete("/documents/{doc_id}", status_code=204)
+def delete_document(
+    doc_id: int,
+    current_user: Annotated[UserContext, Depends(get_current_user)],
+):
+    """Удалить документ (hr — любой, manager — только свои)."""
+    if current_user.role not in ("hr", "manager"):
+        raise HTTPException(status_code=403, detail="Нет доступа")
+    conn = get_connection()
+    try:
+        row = conn.execute("SELECT * FROM uploaded_documents WHERE id=?", (doc_id,)).fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Документ не найден")
+        if current_user.role == "manager" and row["uploaded_by"] != current_user.email:
+            raise HTTPException(status_code=403, detail="Нет доступа")
+        conn.execute("DELETE FROM uploaded_documents WHERE id=?", (doc_id,))
+        conn.commit()
+    finally:
+        conn.close()
 
 
 @app.get("/health")

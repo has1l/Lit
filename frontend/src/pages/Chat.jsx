@@ -1,4 +1,4 @@
-import { AlertCircle, BookOpenCheck, ChevronLeft, SendHorizonal } from 'lucide-react';
+import { AlertCircle, BookOpenCheck, ChevronLeft, Mic, MicOff, SendHorizonal } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { sendChatMessage } from '../api/chat.js';
 import { fetchContacts, fetchMessages, postMessage } from '../api/messages.js';
@@ -89,8 +89,34 @@ export default function Chat({
   // Режим: 'select' | 'peer' | 'assistant'
   const [chatMode, setChatMode] = useState('select');
 
-  const listRef     = useRef(null);
-  const peerListRef = useRef(null);
+  const listRef        = useRef(null);
+  const peerListRef    = useRef(null);
+  const recognitionRef = useRef(null);
+  const [isListening,  setIsListening]  = useState(false);
+  const hasSpeech = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+
+  function startListening() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) return;
+    const r = new SR();
+    r.lang = 'ru-RU';
+    r.interimResults = true;
+    r.continuous = false;
+    r.onresult = (e) => {
+      const transcript = Array.from(e.results).map((res) => res[0].transcript).join('');
+      setAiText(transcript);
+    };
+    r.onerror = () => setIsListening(false);
+    r.onend   = () => setIsListening(false);
+    r.start();
+    recognitionRef.current = r;
+    setIsListening(true);
+  }
+
+  function stopListening() {
+    recognitionRef.current?.stop();
+    setIsListening(false);
+  }
 
   // Загрузка контактов + поллинг (5 с) для обновления превью и непрочитанных
   useEffect(() => {
@@ -181,7 +207,8 @@ export default function Chat({
           state:   response.sources?.length ? 'success' : 'empty',
           text:    response.answer,
           sources: response.sources || [],
-          actions: true,
+          escalate: response.escalate ?? false,
+          actions: !response.escalate,
           fresh:   true,
         },
       ]);
@@ -474,14 +501,22 @@ export default function Chat({
                     </div>
                   )}
 
-                  {!isUser && message.actions && (
+                  {!isUser && (message.escalate || message.actions) && (
                     <div className="flex flex-wrap gap-2">
-                      <Button variant="secondary" className="px-4 py-2" onClick={onCreateAppeal}>
-                        Создать обращение
-                      </Button>
-                      <Button variant="secondary" className="px-4 py-2" onClick={() => openSection('documents')}>
-                        Открыть документы
-                      </Button>
+                      {message.escalate && (
+                        <Button
+                          variant="secondary"
+                          className="px-4 py-2 ring-1 ring-yellow-400/30 text-yellow-200 hover:bg-yellow-500/10"
+                          onClick={() => onCreateAppeal(message.text)}
+                        >
+                          Отправить вопрос в HR
+                        </Button>
+                      )}
+                      {message.actions && (
+                        <Button variant="secondary" className="px-4 py-2" onClick={() => openSection('documents')}>
+                          Открыть документы
+                        </Button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -497,10 +532,25 @@ export default function Chat({
             <input
               value={aiText}
               onChange={(e) => setAiText(e.target.value)}
-              placeholder={isThinking ? 'Техна думает…' : 'Спросите о ПВТР, отпуске, зарплате…'}
+              placeholder={isListening ? 'Говорите…' : isThinking ? 'Техна думает…' : 'Спросите о ПВТР, отпуске, зарплате…'}
               disabled={isThinking}
               className="min-w-0 flex-1 bg-transparent px-4 py-3 text-white outline-none placeholder:text-slate-500 disabled:opacity-60"
             />
+            {hasSpeech && (
+              <button
+                type="button"
+                onClick={isListening ? stopListening : startListening}
+                disabled={isThinking}
+                className={`h-12 w-12 shrink-0 rounded-2xl p-0 transition-all disabled:opacity-50 ${
+                  isListening
+                    ? 'animate-pulse bg-red-500 text-white'
+                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-white'
+                }`}
+                aria-label={isListening ? 'Остановить запись' : 'Голосовой ввод'}
+              >
+                {isListening ? <MicOff size={18} /> : <Mic size={18} />}
+              </button>
+            )}
             <Button
               type="submit"
               disabled={isThinking || !aiText.trim()}

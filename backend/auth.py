@@ -47,6 +47,30 @@ MOCK_USERS: dict[str, dict] = {
         "name":     "Сергей Козлов",
         "department": "Разработка",
     },
+    "senior@portal-test.1221systems.ru": {
+        "password": "6J1~CzTZ&X",
+        "role":     "employee",
+        "name":     "Мария Волкова",
+        "department": "Разработка",
+    },
+    "qa@portal-test.1221systems.ru": {
+        "password": "6J1~CzTZ&X",
+        "role":     "employee",
+        "name":     "Алексей Новиков",
+        "department": "Разработка",
+    },
+    "design@portal-test.1221systems.ru": {
+        "password": "6J1~CzTZ&X",
+        "role":     "employee",
+        "name":     "Ольга Смирнова",
+        "department": "Дизайн",
+    },
+    "clean@portal-test.1221systems.ru": {
+        "password": "6J1~CzTZ&X",
+        "role":     "employee",
+        "name":     "Татьяна Фёдорова",
+        "department": "Хозяйственный отдел",
+    },
 }
 
 # ── Pydantic-схемы ────────────────────────────────────────────────────────────

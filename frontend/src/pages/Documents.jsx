@@ -1,105 +1,210 @@
-import { Download, FileText } from 'lucide-react';
-import { useState } from 'react';
+import { FileText, Loader2, Trash2, Upload } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import Button from '../components/Button.jsx';
 import Card from '../components/Card.jsx';
+import { deleteDocument, fetchDocuments, uploadDocument } from '../api/documents.js';
 import { useEmployeeData } from '../hooks/useEmployeeData.js';
 import { formatFull } from '../lib/format.js';
+import { useAuth } from '../store/AuthContext.jsx';
+
+const AUDIENCE_OPTIONS = [
+  { value: 'all',      label: 'Все сотрудники' },
+  { value: 'managers', label: 'Только руководители' },
+  { value: 'hr',       label: 'Только HR' },
+];
+
+const AUDIENCE_CHIP = {
+  all:      'bg-blue-500/10 text-blue-300 ring-blue-400/30',
+  managers: 'bg-yellow-500/10 text-yellow-300 ring-yellow-400/30',
+  hr:       'bg-purple-500/10 text-purple-300 ring-purple-400/30',
+};
+
+function audienceLabel(val) {
+  return AUDIENCE_OPTIONS.find((o) => o.value === val)?.label || val;
+}
+
+function formatDate(iso) {
+  if (!iso) return '';
+  try {
+    return new Date(iso).toLocaleDateString('ru-RU', { day: '2-digit', month: 'short', year: 'numeric' });
+  } catch { return iso; }
+}
+
+function UploadZone({ onUploaded }) {
+  const fileRef = useRef();
+  const [audience, setAudience] = useState('all');
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
+
+  async function handleFile(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setError('');
+    setUploading(true);
+    try {
+      const doc = await uploadDocument(file, audience);
+      onUploaded(doc);
+      e.target.value = '';
+    } catch (err) {
+      setError(err.message || 'Ошибка загрузки');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <Card>
+      <h2 className="mb-4 text-lg font-bold text-white">Загрузить документ в базу знаний</h2>
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <select
+          value={audience}
+          onChange={(e) => setAudience(e.target.value)}
+          className="fintech-input rounded-2xl px-4 py-3 text-white outline-none"
+        >
+          {AUDIENCE_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+        <Button
+          onClick={() => fileRef.current?.click()}
+          disabled={uploading}
+          className="flex-1 gap-2"
+        >
+          {uploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+          {uploading ? 'Загрузка…' : 'Выбрать файл'}
+        </Button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".pdf,.docx,.doc,.xlsx,.xls"
+          className="hidden"
+          onChange={handleFile}
+        />
+      </div>
+      <p className="mt-2 text-xs text-slate-500">Форматы: PDF, DOCX, XLSX · Макс. 20 МБ</p>
+      {error && <p className="mt-2 text-sm text-red-400">{error}</p>}
+    </Card>
+  );
+}
 
 export default function Documents() {
+  const { user } = useAuth();
   const { data } = useEmployeeData();
-  const [openedDocument, setOpenedDocument] = useState(null);
+  const isHrOrManager = user?.role === 'hr' || user?.role === 'manager';
 
-  const hireDate = data?.profile?.hire_date ? formatFull(data.profile.hire_date) : 'загрузка...';
+  const [corpDocs, setCorpDocs]   = useState([]);
+  const [loading, setLoading]     = useState(true);
+  const [deletingId, setDeletingId] = useState(null);
+
+  const hireDate = data?.profile?.hire_date ? formatFull(data.profile.hire_date) : '—';
   const currentYear = new Date().getFullYear();
 
-  const documents = [
-    {
-      title: 'Справка 2-НДФЛ',
-      date: `За ${currentYear} год`,
-      status: 'Готово',
-      description: 'Документ с данными о доходах и удержанном НДФЛ за выбранный период. Формируется по запросу в течение одного рабочего дня.',
-    },
-    {
-      title: 'Трудовой договор',
-      date: `Подписан ${hireDate}`,
-      status: 'Архив',
-      description: 'Основной трудовой договор с условиями работы, должностью, отделом и графиком.',
-    },
-    {
-      title: 'Полис ДМС',
-      date: `Действует до 31 декабря ${currentYear}`,
-      status: 'Активен',
-      description: 'Программа добровольного медицинского страхования. Доступны: терапевт, стоматология, диагностика, телемедицина.',
-    },
+  const personalDocs = [
+    { title: 'Справка 2-НДФЛ',    date: `За ${currentYear} год`,              status: 'Готово'  },
+    { title: 'Трудовой договор',   date: `Подписан ${hireDate}`,               status: 'Архив'   },
+    { title: 'Полис ДМС',          date: `Действует до 31.12.${currentYear}`,  status: 'Активен' },
   ];
+
+  useEffect(() => {
+    fetchDocuments()
+      .then(setCorpDocs)
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  async function handleDelete(id) {
+    setDeletingId(id);
+    try {
+      await deleteDocument(id);
+      setCorpDocs((prev) => prev.filter((d) => d.id !== id));
+    } catch {}
+    setDeletingId(null);
+  }
 
   return (
     <div className="space-y-6">
       <div>
         <p className="page-eyebrow">Документооборот</p>
         <h1 className="text-3xl font-bold tracking-tight text-white">Документы</h1>
-        <p className="mt-2 text-slate-400">Справки, договоры и HR-документы в одном месте.</p>
+        <p className="mt-2 text-slate-400">Корпоративная база знаний и HR-материалы.</p>
       </div>
 
-      <div className="grid gap-4">
-        {documents.map((document) => (
-          <Card key={document.title} className="p-0">
-            <button
-              onClick={() => setOpenedDocument(document)}
-              className="flex w-full items-center justify-between gap-4 p-5 text-left"
-            >
-              <div className="flex min-w-0 items-center gap-4">
-                <div className="icon-tile h-12 w-12 shrink-0 rounded-2xl">
-                  <FileText size={24} />
+      {isHrOrManager && (
+        <UploadZone onUploaded={(doc) => setCorpDocs((prev) => [doc, ...prev])} />
+      )}
+
+      {/* Корпоративная база знаний */}
+      <div>
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-500">
+          Корпоративная база знаний
+        </h2>
+
+        {loading ? (
+          <div className="flex items-center gap-3 py-8 text-slate-400">
+            <Loader2 size={20} className="animate-spin" />Загрузка…
+          </div>
+        ) : corpDocs.length === 0 ? (
+          <Card>
+            <div className="py-8 text-center">
+              <FileText size={32} className="mx-auto text-slate-600" />
+              <p className="mt-3 text-slate-400">
+                {isHrOrManager ? 'Загрузите первый документ' : 'Документов пока нет'}
+              </p>
+            </div>
+          </Card>
+        ) : (
+          <div className="space-y-3">
+            {corpDocs.map((doc) => (
+              <Card key={doc.id} className="flex items-center gap-4">
+                <div className="icon-tile h-11 w-11 shrink-0 rounded-2xl">
+                  <FileText size={20} />
                 </div>
-                <div className="min-w-0">
-                  <h2 className="truncate font-bold text-white">{document.title}</h2>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-semibold text-white">{doc.filename}</p>
+                  <p className="text-xs text-slate-500">
+                    {doc.uploader_name || doc.uploaded_by} · {formatDate(doc.created_at)} · {doc.chunk_count} фрагм.
+                  </p>
+                </div>
+                <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ring-1 ${AUDIENCE_CHIP[doc.audience] || AUDIENCE_CHIP.all}`}>
+                  {audienceLabel(doc.audience)}
+                </span>
+                {isHrOrManager && (
+                  <button
+                    onClick={() => handleDelete(doc.id)}
+                    disabled={deletingId === doc.id}
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-slate-800 text-slate-400 transition hover:text-red-400 disabled:opacity-50"
+                  >
+                    {deletingId === doc.id
+                      ? <Loader2 size={14} className="animate-spin" />
+                      : <Trash2 size={14} />}
+                  </button>
+                )}
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Личные документы — только для сотрудников */}
+      {!isHrOrManager && (
+        <div>
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-500">Мои документы</h2>
+          <div className="space-y-3">
+            {personalDocs.map((document) => (
+              <Card key={document.title} className="flex items-center gap-4">
+                <div className="icon-tile h-11 w-11 shrink-0 rounded-2xl">
+                  <FileText size={20} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-white">{document.title}</p>
                   <p className="text-sm text-slate-500">{document.date}</p>
                 </div>
-              </div>
-              <div className="flex shrink-0 items-center gap-3">
-                <span className="status-chip hidden rounded-full px-3 py-1 text-sm font-semibold sm:inline-flex">
+                <span className="status-chip shrink-0 rounded-full px-3 py-1 text-sm font-semibold">
                   {document.status}
                 </span>
-                <span className="fintech-control inline-flex h-11 w-11 items-center justify-center rounded-2xl text-slate-100">
-                  <Download size={18} />
-                </span>
-              </div>
-            </button>
-          </Card>
-        ))}
-      </div>
-
-      {openedDocument && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/75 px-4 backdrop-blur-sm">
-          <Card className="w-full max-w-lg">
-            <div className="flex items-start gap-4">
-              <div className="icon-tile h-12 w-12 shrink-0 rounded-2xl">
-                <FileText size={24} />
-              </div>
-              <div className="min-w-0">
-                <h2 className="text-2xl font-bold text-white">{openedDocument.title}</h2>
-                <p className="mt-2 text-slate-400">{openedDocument.description}</p>
-              </div>
-            </div>
-
-            <div className="fintech-control mt-6 grid gap-3 rounded-2xl p-4">
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-slate-500">Дата</span>
-                <span className="font-semibold text-slate-200">{openedDocument.date}</span>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-slate-500">Статус</span>
-                <span className="status-chip rounded-full px-3 py-1 text-sm font-semibold">
-                  {openedDocument.status}
-                </span>
-              </div>
-            </div>
-
-            <Button className="mt-6 w-full" onClick={() => setOpenedDocument(null)}>
-              Закрыть
-            </Button>
-          </Card>
+              </Card>
+            ))}
+          </div>
         </div>
       )}
     </div>

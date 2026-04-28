@@ -53,8 +53,7 @@ function Workspace({ authUser, theme, setTheme }) {
 
   const [activePage,      setActivePage]      = useState(initialPage);
   const [draftPrompt,     setDraftPrompt]     = useState('');
-  const [appeals,         setAppeals]         = useState([]);
-  const [appealModalOpen, setAppealModalOpen] = useState(false);
+  const [appealQuestion,  setAppealQuestion]  = useState('');
   const [contactEmail,    setContactEmail]    = useState(null);
 
   const openChatWithPrompt = useCallback((prompt) => {
@@ -64,21 +63,15 @@ function Workspace({ authUser, theme, setTheme }) {
 
   const clearDraftPrompt = useCallback(() => setDraftPrompt(''), []);
 
-  const openAppealModal = useCallback(() => {
+  // Принимает текст вопроса из чата (когда escalate=true)
+  const openAppealModal = useCallback((question = '') => {
+    setAppealQuestion(question || '');
     setActivePage('appeals');
-    setAppealModalOpen(true);
   }, []);
 
   const openEmployeeChat = useCallback((email) => {
     setContactEmail(email);
     setActivePage('chat');
-  }, []);
-
-  const addAppeal = useCallback((appeal) => {
-    setAppeals((current) => [
-      { id: `HR-${1025 + current.length}`, status: 'Новое', ...appeal },
-      ...current,
-    ]);
   }, []);
 
   const employeePages = {
@@ -100,10 +93,8 @@ function Workspace({ authUser, theme, setTheme }) {
     documents: <Documents />,
     appeals: (
       <Appeals
-        appeals={appeals}
-        addAppeal={addAppeal}
-        modalOpen={appealModalOpen}
-        setModalOpen={setAppealModalOpen}
+        initialQuestion={appealQuestion}
+        key={`appeals-${appealQuestion}`}
       />
     ),
     profile: <Profile profile={profile} />,
@@ -124,6 +115,7 @@ function Workspace({ authUser, theme, setTheme }) {
     ),
     vacation: <Vacation openChatWithPrompt={openChatWithPrompt} />,
     salary:   <Salary />,
+    appeals:  <Appeals initialQuestion={appealQuestion} key={`appeals-${appealQuestion}`} />,
     profile:  <Profile profile={profile} />,
   };
 
