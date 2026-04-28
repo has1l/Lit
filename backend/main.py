@@ -722,13 +722,26 @@ def select_daily_tasks(body: SelectDailyBody, current_user: Annotated[UserContex
         ).fetchone()[0]
         if existing > 0:
             raise HTTPException(status_code=409, detail="Задачи на этот день уже выбраны")
+
+        # Проверка минимального веса выбранных задач
+        goals_data = []
         for gid in body.goal_ids:
             goal = conn.execute(
-                "SELECT id FROM goals WHERE id=? AND employee_email=? AND status='active'",
+                "SELECT id, difficulty FROM goals WHERE id=? AND employee_email=? AND status='active'",
                 (gid, current_user.email),
             ).fetchone()
             if not goal:
                 raise HTTPException(status_code=400, detail=f"Цель {gid} недоступна")
+            goals_data.append(dict(goal))
+
+        total_weight = sum(_DIFFICULTY_WEIGHT.get(g["difficulty"], 15) for g in goals_data)
+        if total_weight < _MIN_DAY_WEIGHT:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Выберите задачи с суммарным весом ≥{_MIN_DAY_WEIGHT} (сейчас {total_weight}). Добавьте задачи посложнее.",
+            )
+
+        for gid in body.goal_ids:
             conn.execute(
                 "INSERT OR IGNORE INTO daily_selections (goal_id,employee_email,date) VALUES (?,?,?)",
                 (gid, current_user.email, body.date),
@@ -783,6 +796,9 @@ def finish_day(body: FinishDayBody, current_user: Annotated[UserContext, Depends
         base_pts = sum(s["points"] for s in selections if s["completed"])
         missed_pts = sum(s["points"] for s in selections if not s["completed"])
 
+        pts_row = _get_or_create_points(conn, current_user.email)
+        prev_streak = pts_row["streak_days"]
+
         if rate == 1.0:
             earned = int(base_pts * 1.5)
             bonus, penalty = True, False
@@ -793,9 +809,14 @@ def finish_day(body: FinishDayBody, current_user: Annotated[UserContext, Depends
             earned = max(0, base_pts - int(missed_pts * 0.2))
             bonus, penalty = False, True
 
-        pts_row = _get_or_create_points(conn, current_user.email)
+        # Стрик-бонус: 3+ дней подряд → +20%
+        streak_bonus = False
+        new_streak = (prev_streak + 1) if rate == 1.0 else 0
+        if rate == 1.0 and prev_streak >= 2:
+            earned = int(earned * 1.2)
+            streak_bonus = True
+
         new_total = pts_row["points_total"] + earned
-        new_streak = (pts_row["streak_days"] + 1) if rate == 1.0 else 0
 
         conn.execute(
             "INSERT INTO employee_points (employee_email,points_total,streak_days,last_active_date) "
@@ -809,6 +830,7 @@ def finish_day(body: FinishDayBody, current_user: Annotated[UserContext, Depends
             "points_earned": earned, "bonus": bonus, "penalty": penalty,
             "streak": new_streak, "total": new_total,
             "completion_rate": round(rate * 100),
+            "streak_bonus": streak_bonus,
         }
     finally:
         conn.close()
@@ -992,6 +1014,240 @@ async def suggest_points(
         result = [{"index": i, "title": g["title"], "points": min(100, max(10, len(g["title"]) * 2))}
                   for i, g in enumerate(body.goals)]
         return {"suggestions": result, "fallback": True}
+
+
+# ── Магазин наград ────────────────────────────────────────────────────────────
+
+class CreateRewardItemBody(BaseModel):
+    title:        str
+    description:  str = ""
+    cost_points:  int
+    quantity:     int = -1  # -1 = unlimited
+
+
+class PurchaseItemBody(BaseModel):
+    item_id: int
+
+
+@app.get("/store/items")
+def get_store_items(current_user: Annotated[UserContext, Depends(get_current_user)]):
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            "SELECT ri.*, e.full_name AS creator_name FROM reward_items ri "
+            "LEFT JOIN employees e ON ri.created_by = e.email "
+            "WHERE ri.is_active = 1 ORDER BY ri.cost_points ASC"
+        ).fetchall()
+        items = []
+        for r in rows:
+            item = dict(r)
+            # Количество доступных = quantity - одобренные заявки
+            if item["quantity"] != -1:
+                used = conn.execute(
+                    "SELECT COUNT(*) FROM reward_requests WHERE item_id=? AND status='approved'",
+                    (r["id"],),
+                ).fetchone()[0]
+                item["available"] = max(0, item["quantity"] - used)
+            else:
+                item["available"] = -1
+            # Есть ли заявка текущего пользователя
+            my_req = conn.execute(
+                "SELECT id, status FROM reward_requests WHERE item_id=? AND employee_email=? ORDER BY id DESC LIMIT 1",
+                (r["id"], current_user.email),
+            ).fetchone()
+            item["my_request"] = dict(my_req) if my_req else None
+            items.append(item)
+        return items
+    finally:
+        conn.close()
+
+
+@app.post("/store/items", status_code=201)
+def create_store_item(
+    body: CreateRewardItemBody,
+    current_user: Annotated[UserContext, Depends(get_current_user)],
+):
+    if current_user.role not in ("manager", "hr"):
+        raise HTTPException(status_code=403, detail="Нет доступа")
+    if body.cost_points <= 0:
+        raise HTTPException(status_code=400, detail="Стоимость должна быть > 0")
+    conn = get_connection()
+    try:
+        cur = conn.execute(
+            "INSERT INTO reward_items (title, description, cost_points, quantity, created_by) VALUES (?,?,?,?,?)",
+            (body.title.strip(), body.description.strip(), body.cost_points, body.quantity, current_user.email),
+        )
+        conn.commit()
+        row = conn.execute(
+            "SELECT ri.*, e.full_name AS creator_name FROM reward_items ri "
+            "LEFT JOIN employees e ON ri.created_by = e.email WHERE ri.id=?",
+            (cur.lastrowid,),
+        ).fetchone()
+        return dict(row)
+    finally:
+        conn.close()
+
+
+@app.delete("/store/items/{item_id}", status_code=204)
+def delete_store_item(
+    item_id: int,
+    current_user: Annotated[UserContext, Depends(get_current_user)],
+):
+    if current_user.role not in ("manager", "hr"):
+        raise HTTPException(status_code=403, detail="Нет доступа")
+    conn = get_connection()
+    try:
+        conn.execute("UPDATE reward_items SET is_active=0 WHERE id=?", (item_id,))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+@app.post("/store/purchase", status_code=201)
+def purchase_item(
+    body: PurchaseItemBody,
+    current_user: Annotated[UserContext, Depends(get_current_user)],
+):
+    conn = get_connection()
+    try:
+        item = conn.execute(
+            "SELECT * FROM reward_items WHERE id=? AND is_active=1", (body.item_id,)
+        ).fetchone()
+        if not item:
+            raise HTTPException(status_code=404, detail="Товар не найден")
+
+        # Проверить лимит количества
+        if item["quantity"] != -1:
+            used = conn.execute(
+                "SELECT COUNT(*) FROM reward_requests WHERE item_id=? AND status='approved'",
+                (body.item_id,),
+            ).fetchone()[0]
+            if used >= item["quantity"]:
+                raise HTTPException(status_code=409, detail="Товар закончился")
+
+        # Проверить, нет ли уже pending-заявки
+        existing = conn.execute(
+            "SELECT id FROM reward_requests WHERE item_id=? AND employee_email=? AND status='pending'",
+            (body.item_id, current_user.email),
+        ).fetchone()
+        if existing:
+            raise HTTPException(status_code=409, detail="У вас уже есть заявка на этот товар")
+
+        # Проверить баллы
+        pts = _get_or_create_points(conn, current_user.email)
+        if pts["points_total"] < item["cost_points"]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Недостаточно баллов: нужно {item['cost_points']}, у вас {pts['points_total']}",
+            )
+
+        # Списываем баллы и создаём заявку
+        new_total = pts["points_total"] - item["cost_points"]
+        conn.execute(
+            "UPDATE employee_points SET points_total=? WHERE employee_email=?",
+            (new_total, current_user.email),
+        )
+        cur = conn.execute(
+            "INSERT INTO reward_requests (item_id, employee_email) VALUES (?,?)",
+            (body.item_id, current_user.email),
+        )
+        conn.commit()
+        req = conn.execute("SELECT * FROM reward_requests WHERE id=?", (cur.lastrowid,)).fetchone()
+        return {"request": dict(req), "points_remaining": new_total}
+    finally:
+        conn.close()
+
+
+@app.get("/store/requests")
+def get_store_requests(current_user: Annotated[UserContext, Depends(get_current_user)]):
+    conn = get_connection()
+    try:
+        if current_user.role == "employee":
+            rows = conn.execute(
+                "SELECT rr.*, ri.title AS item_title, ri.cost_points, e.full_name AS employee_name "
+                "FROM reward_requests rr "
+                "JOIN reward_items ri ON rr.item_id = ri.id "
+                "JOIN employees e ON rr.employee_email = e.email "
+                "WHERE rr.employee_email=? ORDER BY rr.created_at DESC",
+                (current_user.email,),
+            ).fetchall()
+        elif current_user.role == "manager":
+            rows = conn.execute(
+                "SELECT rr.*, ri.title AS item_title, ri.cost_points, e.full_name AS employee_name "
+                "FROM reward_requests rr "
+                "JOIN reward_items ri ON rr.item_id = ri.id "
+                "JOIN employees e ON rr.employee_email = e.email "
+                "WHERE e.manager_email=? ORDER BY rr.created_at DESC",
+                (current_user.email,),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT rr.*, ri.title AS item_title, ri.cost_points, e.full_name AS employee_name "
+                "FROM reward_requests rr "
+                "JOIN reward_items ri ON rr.item_id = ri.id "
+                "JOIN employees e ON rr.employee_email = e.email "
+                "ORDER BY rr.created_at DESC"
+            ).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+@app.patch("/store/requests/{req_id}/approve")
+def approve_reward_request(
+    req_id: int,
+    current_user: Annotated[UserContext, Depends(get_current_user)],
+):
+    if current_user.role not in ("manager", "hr"):
+        raise HTTPException(status_code=403, detail="Нет доступа")
+    conn = get_connection()
+    try:
+        req = conn.execute("SELECT * FROM reward_requests WHERE id=?", (req_id,)).fetchone()
+        if not req:
+            raise HTTPException(status_code=404, detail="Заявка не найдена")
+        if req["status"] != "pending":
+            raise HTTPException(status_code=409, detail="Заявка уже обработана")
+        now_str = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+        conn.execute(
+            "UPDATE reward_requests SET status='approved', reviewed_by=?, reviewed_at=? WHERE id=?",
+            (current_user.email, now_str, req_id),
+        )
+        conn.commit()
+        return dict(conn.execute("SELECT * FROM reward_requests WHERE id=?", (req_id,)).fetchone())
+    finally:
+        conn.close()
+
+
+@app.patch("/store/requests/{req_id}/decline")
+def decline_reward_request(
+    req_id: int,
+    current_user: Annotated[UserContext, Depends(get_current_user)],
+):
+    if current_user.role not in ("manager", "hr"):
+        raise HTTPException(status_code=403, detail="Нет доступа")
+    conn = get_connection()
+    try:
+        req = conn.execute("SELECT * FROM reward_requests WHERE id=?", (req_id,)).fetchone()
+        if not req:
+            raise HTTPException(status_code=404, detail="Заявка не найдена")
+        if req["status"] != "pending":
+            raise HTTPException(status_code=409, detail="Заявка уже обработана")
+        # Вернуть баллы
+        item = conn.execute("SELECT cost_points FROM reward_items WHERE id=?", (req["item_id"],)).fetchone()
+        if item:
+            conn.execute(
+                "UPDATE employee_points SET points_total = points_total + ? WHERE employee_email=?",
+                (item["cost_points"], req["employee_email"]),
+            )
+        now_str = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+        conn.execute(
+            "UPDATE reward_requests SET status='declined', reviewed_by=?, reviewed_at=? WHERE id=?",
+            (current_user.email, now_str, req_id),
+        )
+        conn.commit()
+        return dict(conn.execute("SELECT * FROM reward_requests WHERE id=?", (req_id,)).fetchone())
+    finally:
+        conn.close()
 
 
 # ── HR-тикеты (Appeals) ───────────────────────────────────────────────────────

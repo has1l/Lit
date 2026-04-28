@@ -160,25 +160,27 @@ export default function Documents() {
                   <FileText size={20} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-semibold text-white">{doc.filename}</p>
-                  <p className="text-xs text-slate-500">
-                    {doc.uploader_name || doc.uploaded_by} · {formatDate(doc.created_at)} · {doc.chunk_count} фрагм.
+                  <p className="truncate font-bold text-white sm:text-base">{doc.filename}</p>
+                  <p className="mt-0.5 truncate text-[10px] text-slate-500 sm:text-xs">
+                    {doc.uploader_name || doc.uploaded_by} · {formatDate(doc.created_at)}
                   </p>
                 </div>
-                <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ring-1 ${AUDIENCE_CHIP[doc.audience] || AUDIENCE_CHIP.all}`}>
-                  {audienceLabel(doc.audience)}
-                </span>
-                {isHrOrManager && (
-                  <button
-                    onClick={() => handleDelete(doc.id)}
-                    disabled={deletingId === doc.id}
-                    className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-slate-800 text-slate-400 transition hover:text-red-400 disabled:opacity-50"
-                  >
-                    {deletingId === doc.id
-                      ? <Loader2 size={14} className="animate-spin" />
-                      : <Trash2 size={14} />}
-                  </button>
-                )}
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className={`hidden rounded-full px-2 py-0.5 text-[10px] font-bold uppercase sm:inline-block ${AUDIENCE_CHIP[doc.audience] || AUDIENCE_CHIP.all}`}>
+                    {audienceLabel(doc.audience)}
+                  </span>
+                  {isHrOrManager && (
+                    <button
+                      onClick={() => handleDelete(doc.id)}
+                      disabled={deletingId === doc.id}
+                      className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-slate-800 text-slate-400 transition hover:text-red-400 disabled:opacity-50"
+                    >
+                      {deletingId === doc.id
+                        ? <Loader2 size={14} className="animate-spin" />
+                        : <Trash2 size={14} />}
+                    </button>
+                  )}
+                </div>
               </Card>
             ))}
           </div>
