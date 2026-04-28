@@ -119,11 +119,14 @@ class ChatRequest(BaseModel):
 
 
 class ChatResponse(BaseModel):
-    answer:   str
-    sources:  list[str]
-    steps:    int
-    user:     str
-    escalate: bool = False
+    answer:      str
+    sources:     list[str]
+    steps:       int
+    user:        str
+    escalate:    bool = False
+    doc_id:      int | None = None
+    doc_page:    int = 0
+    doc_section: str = ""
 
 
 # ── Маршруты ──────────────────────────────────────────────────────────────────
@@ -159,6 +162,9 @@ async def chat(
         steps=result["steps"],
         user=current_user.name,
         escalate=result.get("escalate", False),
+        doc_id=result.get("doc_id"),
+        doc_page=result.get("doc_page", 0),
+        doc_section=result.get("doc_section", ""),
     )
 
 
