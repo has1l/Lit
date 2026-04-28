@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Node
+node_modules/
+frontend/dist/
+
+# Xcode
+*.xcuserstate
+xcuserdata/
+DerivedData/
+
+# ChromaDB binaries
+backend/chroma_db/
+chroma_db/
+
+# Databases (keep structure, not data)
+backend/hr.db
