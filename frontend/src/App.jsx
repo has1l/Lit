@@ -113,10 +113,11 @@ function Workspace({ authUser, theme, setTheme }) {
         profile={profile}
       />
     ),
-    vacation: <Vacation openChatWithPrompt={openChatWithPrompt} />,
-    salary:   <Salary />,
-    appeals:  <Appeals initialQuestion={appealQuestion} key={`appeals-${appealQuestion}`} />,
-    profile:  <Profile profile={profile} />,
+    vacation:  <Vacation openChatWithPrompt={openChatWithPrompt} />,
+    salary:    <Salary />,
+    documents: <Documents />,
+    appeals:   <Appeals initialQuestion={appealQuestion} key={`appeals-${appealQuestion}`} />,
+    profile:   <Profile profile={profile} />,
   };
 
   const pages = viewMode === 'manager' ? managerPages : employeePages;

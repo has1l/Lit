@@ -22,12 +22,14 @@ export const navItems = [
 ];
 
 export const managerNavItems = [
-  { id: 'team',     label: 'Команда',   icon: ClipboardList },
-  { id: 'chat',     label: 'Чат',       icon: MessageCircle },
-  { divider: true,  label: 'Мой кабинет' },
-  { id: 'vacation', label: 'Отпуск',    icon: CalendarDays },
-  { id: 'salary',   label: 'Зарплата',  icon: WalletCards },
-  { id: 'profile',  label: 'Профиль',   icon: UserRound },
+  { id: 'team',      label: 'Команда',    icon: ClipboardList },
+  { id: 'chat',      label: 'Чат',        icon: MessageCircle },
+  { id: 'documents', label: 'Документы',  icon: FileText },
+  { id: 'appeals',   label: 'Обращения',  icon: ClipboardList },
+  { divider: true,   label: 'Мой кабинет' },
+  { id: 'vacation',  label: 'Отпуск',     icon: CalendarDays },
+  { id: 'salary',    label: 'Зарплата',   icon: WalletCards },
+  { id: 'profile',   label: 'Профиль',    icon: UserRound },
 ];
 
 // ── Подсказки-кнопки в AI-чате (готовые промты) ───────────────────────────
