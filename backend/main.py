@@ -19,7 +19,7 @@ from pathlib import Path
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -71,6 +71,39 @@ app.include_router(auth_router)
 def on_startup():
     init_db()
     print("[API] Сервер запущен. База данных готова.")
+
+
+# ── STT (Speech-to-Text) через faster-whisper ─────────────────────────────────
+
+_whisper_model = None
+
+def _get_whisper():
+    global _whisper_model
+    if _whisper_model is None:
+        from faster_whisper import WhisperModel
+        print("[STT] Загружаю модель Whisper small...")
+        _whisper_model = WhisperModel("small", device="cpu", compute_type="int8")
+        print("[STT] Модель загружена.")
+    return _whisper_model
+
+
+@app.post("/stt")
+async def speech_to_text(audio: UploadFile = File(...)):
+    """Принимает аудио-файл (webm/wav/ogg), возвращает распознанный текст."""
+    import tempfile, os
+    suffix = Path(audio.filename or "audio.webm").suffix or ".webm"
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+        tmp.write(await audio.read())
+        tmp_path = tmp.name
+    try:
+        model = _get_whisper()
+        segments, _ = model.transcribe(tmp_path, language="ru", beam_size=3)
+        text = " ".join(seg.text.strip() for seg in segments).strip()
+        return {"text": text}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        os.unlink(tmp_path)
 
 
 # ── Схемы запрос/ответ для чата ───────────────────────────────────────────────
@@ -1167,6 +1200,118 @@ def get_document_file(
         raise HTTPException(status_code=404, detail="Файл не найден на сервере")
     media_type = _DOC_MEDIA_TYPES.get(suffix, "application/octet-stream")
     return FileResponse(str(file_path), media_type=media_type, filename=row["filename"])
+
+
+@app.get("/documents/{doc_id}/view", response_class=HTMLResponse)
+def view_document(
+    doc_id: int,
+    current_user: Annotated[UserContext, Depends(get_current_user)],
+):
+    """Рендерит DOCX как HTML-страницу с анкорами по разделам."""
+    import html as html_lib
+    conn = get_connection()
+    try:
+        row = conn.execute("SELECT * FROM uploaded_documents WHERE id=?", (doc_id,)).fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Документ не найден")
+        allowed = _ROLE_AUDIENCE.get(current_user.role, ["all"])
+        if row["audience"] not in allowed:
+            raise HTTPException(status_code=403, detail="Нет доступа")
+    finally:
+        conn.close()
+
+    suffix = Path(row["filename"]).suffix.lower()
+    file_path = _UPLOADS_DIR / f"{doc_id}{suffix}"
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Файл не найден на сервере")
+
+    doc_title = html_lib.escape(row["filename"])
+    sections_html = ""
+
+    if suffix in (".docx", ".doc"):
+        import re
+        from docx import Document as DocxDocument
+        HEADING_STYLES = {
+            "heading 1", "heading 2", "heading 3",
+            "заголовок 1", "заголовок 2", "заголовок 3",
+        }
+        _H_RE = re.compile(r"^(Статья|Раздел|Глава|Пункт)\s+\d+", re.IGNORECASE)
+        doc = DocxDocument(str(file_path))
+        current_heading = "Общие положения"
+        current_lines: list[str] = []
+
+        def _flush(heading: str, lines: list[str]) -> str:
+            if not lines:
+                return ""
+            anchor = html_lib.escape(heading)
+            body = "".join(f"<p>{html_lib.escape(l)}</p>" for l in lines if l.strip())
+            return f'<section id="{anchor}"><h2>{anchor}</h2>{body}</section>\n'
+
+        for para in doc.paragraphs:
+            text = para.text.strip()
+            if not text:
+                continue
+            style = (para.style.name or "").lower()
+            is_h = style in HEADING_STYLES or bool(_H_RE.match(text))
+            if is_h:
+                sections_html += _flush(current_heading, current_lines)
+                current_heading = text[:120]
+                current_lines = []
+            else:
+                current_lines.append(text)
+        sections_html += _flush(current_heading, current_lines)
+
+    elif suffix == ".pdf":
+        sections_html = (
+            '<section id="doc">'
+            f'<p>PDF-документ: <a href="/documents/{doc_id}/file">{doc_title}</a></p>'
+            '</section>'
+        )
+    else:
+        sections_html = f'<section id="doc"><p>{doc_title}</p></section>'
+
+    html_content = f"""<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{doc_title}</title>
+  <style>
+    *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
+    body {{
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0f1221; color: #e2e8f0;
+      padding: 2rem 1rem; max-width: 860px; margin: 0 auto;
+      line-height: 1.7; font-size: 15px;
+    }}
+    h1 {{ font-size: 1.4rem; color: #a5b4fc; margin-bottom: 2rem; border-bottom: 1px solid #334155; padding-bottom: 1rem; }}
+    section {{ padding: 1.25rem 1.5rem; margin-bottom: 1rem; border-radius: 12px; border: 1px solid transparent; scroll-margin-top: 80px; }}
+    section h2 {{ font-size: 1rem; font-weight: 700; color: #c7d2fe; margin-bottom: .75rem; }}
+    section p {{ color: #94a3b8; margin-bottom: .5rem; }}
+    section:target {{
+      background: rgba(124, 58, 237, 0.15);
+      border-color: rgba(124, 58, 237, 0.5);
+      box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.25);
+    }}
+    section:target h2 {{ color: #a78bfa; }}
+    section:target p {{ color: #cbd5e1; }}
+    .nav {{ position: sticky; top: 0; background: #0f1221cc; backdrop-filter: blur(8px); padding: .75rem 0; margin-bottom: 1.5rem; border-bottom: 1px solid #1e293b; font-size: .8rem; color: #64748b; }}
+  </style>
+</head>
+<body>
+  <div class="nav">{doc_title}</div>
+  <h1>{doc_title}</h1>
+  {sections_html}
+  <script>
+    const hash = decodeURIComponent(location.hash.slice(1));
+    if (hash) {{
+      const el = document.getElementById(hash);
+      if (el) el.scrollIntoView({{ behavior: "smooth", block: "start" }});
+    }}
+  </script>
+</body>
+</html>"""
+    return HTMLResponse(content=html_content)
 
 
 @app.delete("/documents/{doc_id}", status_code=204)

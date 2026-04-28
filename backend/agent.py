@@ -254,13 +254,13 @@ def _get_payments_block(email: str, user_email: str, user_role: str) -> str:
 
 # ── RAG: поиск по ПВТР ───────────────────────────────────────────────────────
 
-def _search_docs(query: str, user_role: str) -> tuple[str, list[str], str, int]:
+def _search_docs(query: str, user_role: str) -> tuple[str, list[str], str, int, str]:
     """Returns (doc_text, sources, source_filename) — source_filename used to locate the DB record."""
     allowed = _AUDIENCE_BY_ROLE.get(user_role, ["all"])
     coll = _get_chroma()
 
     if coll is None:
-        return "", [], "", 0
+        return "", [], "", 0, ""
 
     if coll is not None:
         try:
@@ -281,6 +281,7 @@ def _search_docs(query: str, user_role: str) -> tuple[str, list[str], str, int]:
                 best_meta = chunks[0][1]
                 source_filename = best_meta.get("source_file", "")
                 source_page = int(best_meta.get("page_number", 0) or 0)
+                source_section = best_meta.get("section", "")
                 for doc, meta, _ in chunks[:3]:
                     section = meta.get("section", "").strip()
                     title = meta.get("title", "").strip()
@@ -289,10 +290,10 @@ def _search_docs(query: str, user_role: str) -> tuple[str, list[str], str, int]:
                     src = f"Основание: {cite}"
                     if src not in sources:
                         sources.append(src)
-                return "\n\n---\n\n".join(parts), sources, source_filename, source_page
+                return "\n\n---\n\n".join(parts), sources, source_filename, source_page, source_section
         except Exception as e:
             print(f"[CHROMA] {e}")
-            return "", [], "", 0
+            return "", [], "", 0, ""
 
     # FTS fallback
     try:
@@ -301,12 +302,12 @@ def _search_docs(query: str, user_role: str) -> tuple[str, list[str], str, int]:
             "SELECT name FROM sqlite_master WHERE type='table' AND name='documents_fts'"
         ).fetchone():
             conn.close()
-            return "", [], ""
+            return "", [], "", 0, ""
         words = [w for w in query.split() if len(w) > 2]
         terms = " OR ".join(f"{w[:max(4, len(w)-2)]}*" for w in words if w)
         if not terms:
             conn.close()
-            return "", [], ""
+            return "", [], "", 0, ""
         rows = conn.execute(
             "SELECT content, title, section, audience FROM documents_fts "
             "WHERE documents_fts MATCH ? ORDER BY rank LIMIT 5", (terms,)
@@ -314,7 +315,7 @@ def _search_docs(query: str, user_role: str) -> tuple[str, list[str], str, int]:
         conn.close()
         relevant = [r for r in rows if r["audience"] in allowed]
         if not relevant:
-            return "", [], "", 0
+            return "", [], "", 0, ""
         parts, sources = [], []
         for r in relevant[:3]:
             section = r['section'].strip()
@@ -324,9 +325,9 @@ def _search_docs(query: str, user_role: str) -> tuple[str, list[str], str, int]:
             src = f"Основание: {cite}"
             if src not in sources:
                 sources.append(src)
-        return "\n\n---\n\n".join(parts), sources, "", 0
-    except Exception as e:
-        return "", [], "", 0
+        return "\n\n---\n\n".join(parts), sources, "", 0, relevant[0]["section"] if relevant else ""
+    except Exception:
+        return "", [], "", 0, ""
 
 
 # ── Системный промпт ──────────────────────────────────────────────────────────
@@ -390,7 +391,7 @@ async def run_agent(
             context_parts.append(f"=== Данные о коллеге ({colleague['full_name']}) ===\n{col_ctx}")
 
     # — ПВТР / HR-документы —
-    doc_text, doc_sources, doc_source_file, doc_source_page = _search_docs(message, user_role)
+    doc_text, doc_sources, doc_source_file, doc_source_page, doc_source_section = _search_docs(message, user_role)
     if doc_text:
         context_parts.append(f"=== HR-документы ===\n{doc_text}")
 
@@ -465,6 +466,7 @@ async def run_agent(
         "sources":  sources,
         "steps":    2 + (1 if doc_text else 0) + (1 if colleague else 0),
         "escalate": escalate,
-        "doc_id":   doc_id,
-        "doc_page": doc_source_page if doc_id else 0,
+        "doc_id":      doc_id,
+        "doc_page":    doc_source_page if doc_id else 0,
+        "doc_section": doc_source_section if doc_id else "",
     }

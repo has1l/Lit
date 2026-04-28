@@ -13,6 +13,19 @@ export async function openDocumentFile(docId, page = 0) {
   window.open(url, '_blank');
 }
 
+export async function openDocumentView(docId, section = '') {
+  const token = tokenStore.get();
+  const response = await fetch(`${API_BASE}/documents/${docId}/view`, {
+    headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+  });
+  if (!response.ok) throw new Error('Документ не найден');
+  const html = await response.text();
+  const blob = new Blob([html], { type: 'text/html' });
+  const base = URL.createObjectURL(blob);
+  const anchor = section ? encodeURIComponent(section) : '';
+  window.open(anchor ? `${base}#${anchor}` : base, '_blank');
+}
+
 export function fetchDocuments() {
   return apiFetch('/documents');
 }

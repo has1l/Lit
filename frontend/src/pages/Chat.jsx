@@ -1,7 +1,7 @@
 import { AlertCircle, BookOpenCheck, ChevronLeft, Mic, MicOff, SendHorizonal, Sparkles } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { sendChatMessage } from '../api/chat.js';
-import { openDocumentFile } from '../api/documents.js';
+import { openDocumentFile, openDocumentView } from '../api/documents.js';
 import { fetchContacts, fetchMessages, postMessage } from '../api/messages.js';
 import Button from '../components/Button.jsx';
 import Card from '../components/Card.jsx';
@@ -249,9 +249,10 @@ export default function Chat({
           sources: response.sources || [],
           escalate: response.escalate ?? false,
           actions: (response.sources?.length ?? 0) > 0,
-          doc_id:  response.doc_id ?? null,
-          doc_page: response.doc_page ?? 0,
-          fresh:   true,
+          doc_id:      response.doc_id ?? null,
+          doc_page:    response.doc_page ?? 0,
+          doc_section: response.doc_section ?? '',
+          fresh:       true,
         },
       ]);
     } catch (err) {
@@ -584,8 +585,8 @@ export default function Chat({
                             {message.doc_id ? (
                               <button
                                 type="button"
-                                className="text-left underline decoration-dotted underline-offset-2 hover:text-purple-300 transition-colors"
-                                onClick={() => openDocumentFile(message.doc_id, message.doc_page).catch(() => openSection('documents'))}
+                                className="text-left underline decoration-dotted underline-offset-2 hover:text-purple-300 transition-colors cursor-pointer"
+                                onClick={() => openDocumentView(message.doc_id, message.doc_section).catch(() => openSection('documents'))}
                               >
                                 {src}
                               </button>
