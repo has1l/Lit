@@ -1,14 +1,15 @@
 import { API_BASE, ApiError, tokenStore } from './client.js';
 import { apiFetch } from './client.js';
 
-export async function openDocumentFile(docId) {
+export async function openDocumentFile(docId, page = 0) {
   const token = tokenStore.get();
   const response = await fetch(`${API_BASE}/documents/${docId}/file`, {
     headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
   });
   if (!response.ok) throw new Error('Файл не найден');
   const blob = await response.blob();
-  const url = URL.createObjectURL(blob);
+  const base = URL.createObjectURL(blob);
+  const url = page > 0 ? `${base}#page=${page}` : base;
   window.open(url, '_blank');
 }
 

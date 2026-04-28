@@ -8,6 +8,7 @@ import Card from '../components/Card.jsx';
 import Mascot from '../components/Mascot.jsx';
 import { useAuth } from '../store/AuthContext.jsx';
 import { quickQuestions } from '../data/mockData.js';
+import { API_BASE } from '../api/client.js';
 
 const WELCOME_MESSAGE = {
   id:     'welcome',
@@ -97,99 +98,62 @@ export default function Chat({
 
   const listRef        = useRef(null);
   const peerListRef    = useRef(null);
-  const recognitionRef = useRef(null);
-  const isListeningRef = useRef(false);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef   = useRef([]);
   const [isListening,  setIsListening]  = useState(false);
-  const hasSpeech = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+  const hasSpeech = true; // Теперь всегда доступно через наш сервер
 
 
-  const baseTextRef = useRef(''); // текст ДО начала записи
-
-  function startListening() {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) {
-      alert('Голосовой ввод не поддерживается в вашем браузере.');
-      return;
-    }
-
-    // Сохраняем текущий текст как базу
-    baseTextRef.current = aiText;
-
-    const r = new SR();
-    r.lang = 'ru-RU';
-    r.interimResults = true;
-    r.continuous = true;   // продолжаем слушать пока пользователь не нажмёт стоп
-    r.maxAlternatives = 1;
-
-    r.onstart  = () => console.log('[SR] onstart — микрофон активен');
-    r.onaudiostart = () => console.log('[SR] onaudiostart — аудио захвачено');
-    r.onspeechstart = () => console.log('[SR] onspeechstart — речь обнаружена');
-    r.onspeechend = () => console.log('[SR] onspeechend — речь закончилась');
-    r.onaudioend  = () => console.log('[SR] onaudioend — аудио остановлено');
-
-    r.onresult = (e) => {
-      console.log('[SR] onresult — событие:', e.resultIndex, e.results.length);
-      let interimTranscript = '';
-      let finalTranscript = '';
-
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        const result = e.results[i];
-        if (!result || !result[0]) { console.log('[SR] пустой result на', i); continue; }
-        const t = result[0].transcript;
-        console.log('[SR] result[' + i + ']:', t, 'isFinal:', result.isFinal);
-        if (result.isFinal) {
-          finalTranscript += t;
-        } else {
-          interimTranscript += t;
-        }
-      }
-
-      if (finalTranscript) {
-        const sep = baseTextRef.current ? ' ' : '';
-        baseTextRef.current = baseTextRef.current + sep + finalTranscript;
-      }
-
-      const display = baseTextRef.current + (interimTranscript ? ` ${interimTranscript}` : '');
-      setAiText(display.trim());
-    };
-
-
-    r.onerror = (e) => {
-      console.error('Speech error:', e.error);
-      setIsListening(false);
-      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-        alert('Голосовой ввод заблокирован. Разрешите доступ к микрофону.');
-      } else if (e.error === 'network') {
-        alert('Ошибка сети: браузер не может связаться с сервером распознавания речи. Проверьте интернет-соединение.');
-      } else if (e.error !== 'aborted') {
-        alert(`Ошибка голосового ввода: ${e.error}`);
-      }
-    };
-
-    r.onend = () => {
-      // При continuous=true перезапускаем, если пользователь ещё не остановил
-      if (recognitionRef.current === r && isListeningRef.current) {
-        try { r.start(); } catch {}
-      } else {
-        setIsListening(false);
-      }
-    };
-
+  async function startListening() {
     try {
-      r.start();
-      recognitionRef.current = r;
-      isListeningRef.current = true;
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const formData = new FormData();
+        formData.append('audio', audioBlob, 'audio.webm');
+
+        // Показываем что-то в процессе (опционально)
+        // setAiText(prev => prev + '... [распознавание] ...');
+
+        try {
+          const response = await fetch(`${API_BASE}/stt`, {
+            method: 'POST',
+            body: formData,
+          });
+          const data = await response.json();
+          if (data.text) {
+            setAiText(prev => prev ? `${prev} ${data.text}` : data.text);
+          }
+        } catch (error) {
+          console.error('STT Error:', error);
+          alert('Ошибка распознавания речи на сервере');
+        }
+      };
+
+      mediaRecorder.start();
       setIsListening(true);
     } catch (err) {
-      console.error('Failed to start speech recognition:', err);
-      setIsListening(false);
+      console.error('Error accessing microphone:', err);
+      alert('Нет доступа к микрофону. Разрешите его в настройках браузера.');
     }
   }
 
   function stopListening() {
-    isListeningRef.current = false;
-    recognitionRef.current?.stop();
-    recognitionRef.current = null;
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.stop();
+      // Останавливаем все треки микрофона
+      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+    }
     setIsListening(false);
   }
 
@@ -286,6 +250,7 @@ export default function Chat({
           escalate: response.escalate ?? false,
           actions: (response.sources?.length ?? 0) > 0,
           doc_id:  response.doc_id ?? null,
+          doc_page: response.doc_page ?? 0,
           fresh:   true,
         },
       ]);
@@ -620,7 +585,7 @@ export default function Chat({
                               <button
                                 type="button"
                                 className="text-left underline decoration-dotted underline-offset-2 hover:text-purple-300 transition-colors"
-                                onClick={() => openDocumentFile(message.doc_id).catch(() => openSection('documents'))}
+                                onClick={() => openDocumentFile(message.doc_id, message.doc_page).catch(() => openSection('documents'))}
                               >
                                 {src}
                               </button>
@@ -647,7 +612,7 @@ export default function Chat({
                           <Button
                             variant="secondary"
                             className="px-4 py-2"
-                            onClick={() => openDocumentFile(message.doc_id).catch(() => openSection('documents'))}
+                            onClick={() => openDocumentFile(message.doc_id, message.doc_page).catch(() => openSection('documents'))}
                           >
                             Открыть документ
                           </Button>

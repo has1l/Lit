@@ -254,10 +254,13 @@ def _get_payments_block(email: str, user_email: str, user_role: str) -> str:
 
 # ── RAG: поиск по ПВТР ───────────────────────────────────────────────────────
 
-def _search_docs(query: str, user_role: str) -> tuple[str, list[str], str]:
+def _search_docs(query: str, user_role: str) -> tuple[str, list[str], str, int]:
     """Returns (doc_text, sources, source_filename) — source_filename used to locate the DB record."""
     allowed = _AUDIENCE_BY_ROLE.get(user_role, ["all"])
     coll = _get_chroma()
+
+    if coll is None:
+        return "", [], "", 0
 
     if coll is not None:
         try:
@@ -275,16 +278,21 @@ def _search_docs(query: str, user_role: str) -> tuple[str, list[str], str]:
             chunks.sort(key=lambda x: x[2])
             if chunks:
                 parts, sources = [], []
-                source_filename = chunks[0][1].get("source_file", "")
+                best_meta = chunks[0][1]
+                source_filename = best_meta.get("source_file", "")
+                source_page = int(best_meta.get("page_number", 0) or 0)
                 for doc, meta, _ in chunks[:3]:
-                    cite = f"{meta['section'].strip()} «{meta['title'].strip()}»"
+                    section = meta.get("section", "").strip()
+                    title = meta.get("title", "").strip()
+                    cite = f"{section} · {title}" if section and title else (section or title)
                     parts.append(f"{doc}\n\nОснование: {cite}")
                     src = f"Основание: {cite}"
                     if src not in sources:
                         sources.append(src)
-                return "\n\n---\n\n".join(parts), sources, source_filename
+                return "\n\n---\n\n".join(parts), sources, source_filename, source_page
         except Exception as e:
             print(f"[CHROMA] {e}")
+            return "", [], "", 0
 
     # FTS fallback
     try:
@@ -306,17 +314,19 @@ def _search_docs(query: str, user_role: str) -> tuple[str, list[str], str]:
         conn.close()
         relevant = [r for r in rows if r["audience"] in allowed]
         if not relevant:
-            return "", [], ""
+            return "", [], "", 0
         parts, sources = [], []
         for r in relevant[:3]:
-            cite = f"{r['section'].strip()} «{r['title'].strip()}»"
+            section = r['section'].strip()
+            title = r['title'].strip()
+            cite = f"{section} · {title}" if section and title else (section or title)
             parts.append(f"{r['content']}\n\nОснование: {cite}")
             src = f"Основание: {cite}"
             if src not in sources:
                 sources.append(src)
-        return "\n\n---\n\n".join(parts), sources, ""
+        return "\n\n---\n\n".join(parts), sources, "", 0
     except Exception as e:
-        return "", [], ""
+        return "", [], "", 0
 
 
 # ── Системный промпт ──────────────────────────────────────────────────────────
@@ -380,7 +390,7 @@ async def run_agent(
             context_parts.append(f"=== Данные о коллеге ({colleague['full_name']}) ===\n{col_ctx}")
 
     # — ПВТР / HR-документы —
-    doc_text, doc_sources, doc_source_file = _search_docs(message, user_role)
+    doc_text, doc_sources, doc_source_file, doc_source_page = _search_docs(message, user_role)
     if doc_text:
         context_parts.append(f"=== HR-документы ===\n{doc_text}")
 
@@ -456,4 +466,5 @@ async def run_agent(
         "steps":    2 + (1 if doc_text else 0) + (1 if colleague else 0),
         "escalate": escalate,
         "doc_id":   doc_id,
+        "doc_page": doc_source_page if doc_id else 0,
     }
