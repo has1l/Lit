@@ -254,7 +254,8 @@ def _get_payments_block(email: str, user_email: str, user_role: str) -> str:
 
 # ── RAG: поиск по ПВТР ───────────────────────────────────────────────────────
 
-def _search_docs(query: str, user_role: str) -> tuple[str, list[str]]:
+def _search_docs(query: str, user_role: str) -> tuple[str, list[str], str]:
+    """Returns (doc_text, sources, source_filename) — source_filename used to locate the DB record."""
     allowed = _AUDIENCE_BY_ROLE.get(user_role, ["all"])
     coll = _get_chroma()
 
@@ -274,13 +275,14 @@ def _search_docs(query: str, user_role: str) -> tuple[str, list[str]]:
             chunks.sort(key=lambda x: x[2])
             if chunks:
                 parts, sources = [], []
+                source_filename = chunks[0][1].get("source_file", "")
                 for doc, meta, _ in chunks[:3]:
                     cite = f"{meta['section'].strip()} «{meta['title'].strip()}»"
                     parts.append(f"{doc}\n\nОснование: {cite}")
                     src = f"Основание: {cite}"
                     if src not in sources:
                         sources.append(src)
-                return "\n\n---\n\n".join(parts), sources
+                return "\n\n---\n\n".join(parts), sources, source_filename
         except Exception as e:
             print(f"[CHROMA] {e}")
 
@@ -291,12 +293,12 @@ def _search_docs(query: str, user_role: str) -> tuple[str, list[str]]:
             "SELECT name FROM sqlite_master WHERE type='table' AND name='documents_fts'"
         ).fetchone():
             conn.close()
-            return "", []
+            return "", [], ""
         words = [w for w in query.split() if len(w) > 2]
         terms = " OR ".join(f"{w[:max(4, len(w)-2)]}*" for w in words if w)
         if not terms:
             conn.close()
-            return "", []
+            return "", [], ""
         rows = conn.execute(
             "SELECT content, title, section, audience FROM documents_fts "
             "WHERE documents_fts MATCH ? ORDER BY rank LIMIT 5", (terms,)
@@ -304,7 +306,7 @@ def _search_docs(query: str, user_role: str) -> tuple[str, list[str]]:
         conn.close()
         relevant = [r for r in rows if r["audience"] in allowed]
         if not relevant:
-            return "", []
+            return "", [], ""
         parts, sources = [], []
         for r in relevant[:3]:
             cite = f"{r['section'].strip()} «{r['title'].strip()}»"
@@ -312,9 +314,9 @@ def _search_docs(query: str, user_role: str) -> tuple[str, list[str]]:
             src = f"Основание: {cite}"
             if src not in sources:
                 sources.append(src)
-        return "\n\n---\n\n".join(parts), sources
+        return "\n\n---\n\n".join(parts), sources, ""
     except Exception as e:
-        return "", []
+        return "", [], ""
 
 
 # ── Системный промпт ──────────────────────────────────────────────────────────
@@ -378,7 +380,7 @@ async def run_agent(
             context_parts.append(f"=== Данные о коллеге ({colleague['full_name']}) ===\n{col_ctx}")
 
     # — ПВТР / HR-документы —
-    doc_text, doc_sources = _search_docs(message, user_role)
+    doc_text, doc_sources, doc_source_file = _search_docs(message, user_role)
     if doc_text:
         context_parts.append(f"=== HR-документы ===\n{doc_text}")
 
@@ -433,9 +435,25 @@ async def run_agent(
         "не могу ответить", "данных нет", "нет данных", "информации нет",
     ])
 
+    # Найти doc_id в БД по имени файла (для кнопки "Открыть документ")
+    doc_id = None
+    if doc_source_file:
+        try:
+            conn = get_connection()
+            row = conn.execute(
+                "SELECT id FROM uploaded_documents WHERE filename=? ORDER BY id DESC LIMIT 1",
+                (doc_source_file,),
+            ).fetchone()
+            conn.close()
+            if row:
+                doc_id = row["id"]
+        except Exception:
+            pass
+
     return {
         "answer":   final_answer,
         "sources":  sources,
         "steps":    2 + (1 if doc_text else 0) + (1 if colleague else 0),
         "escalate": escalate,
+        "doc_id":   doc_id,
     }

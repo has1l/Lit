@@ -1,7 +1,16 @@
-import { ApiError, tokenStore } from './client.js';
+import { API_BASE, ApiError, tokenStore } from './client.js';
 import { apiFetch } from './client.js';
 
-const API_BASE = import.meta.env.VITE_API_BASE || '/api';
+export async function openDocumentFile(docId) {
+  const token = tokenStore.get();
+  const response = await fetch(`${API_BASE}/documents/${docId}/file`, {
+    headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+  });
+  if (!response.ok) throw new Error('Файл не найден');
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  window.open(url, '_blank');
+}
 
 export function fetchDocuments() {
   return apiFetch('/documents');

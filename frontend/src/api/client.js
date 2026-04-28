@@ -6,7 +6,7 @@
  * базовый путь меняется одной переменной.
  */
 
-const API_BASE = import.meta.env.MODE === 'development'
+export const API_BASE = import.meta.env.MODE === 'development'
   ? (import.meta.env.VITE_API_BASE || '/api')
   : (import.meta.env.VITE_API_BASE || '');
 const TOKEN_KEY = 'lit-auth-token';

@@ -1,6 +1,7 @@
 import { AlertCircle, BookOpenCheck, ChevronLeft, Mic, MicOff, SendHorizonal, Sparkles } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { sendChatMessage } from '../api/chat.js';
+import { openDocumentFile } from '../api/documents.js';
 import { fetchContacts, fetchMessages, postMessage } from '../api/messages.js';
 import Button from '../components/Button.jsx';
 import Card from '../components/Card.jsx';
@@ -235,7 +236,8 @@ export default function Chat({
           text:    response.answer,
           sources: response.sources || [],
           escalate: response.escalate ?? false,
-          actions: !response.escalate,
+          actions: (response.sources?.length ?? 0) > 0,
+          doc_id:  response.doc_id ?? null,
           fresh:   true,
         },
       ]);
@@ -583,9 +585,19 @@ export default function Chat({
                         </Button>
                       )}
                       {message.actions && (
-                        <Button variant="secondary" className="px-4 py-2" onClick={() => openSection('documents')}>
-                          Открыть документы
-                        </Button>
+                        message.doc_id ? (
+                          <Button
+                            variant="secondary"
+                            className="px-4 py-2"
+                            onClick={() => openDocumentFile(message.doc_id).catch(() => openSection('documents'))}
+                          >
+                            Открыть документ
+                          </Button>
+                        ) : (
+                          <Button variant="secondary" className="px-4 py-2" onClick={() => openSection('documents')}>
+                            Открыть документы
+                          </Button>
+                        )
                       )}
                     </div>
                   )}

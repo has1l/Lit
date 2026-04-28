@@ -27,6 +27,23 @@ from agent import run_agent
 from auth import UserContext, get_current_user, router as auth_router
 from database import get_connection, init_db
 
+_UPLOADS_DIR = Path(__file__).parent / "uploads"
+_UPLOADS_DIR.mkdir(exist_ok=True)
+
+_DOC_MEDIA_TYPES = {
+    ".pdf":  "application/pdf",
+    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ".doc":  "application/msword",
+    ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ".xls":  "application/vnd.ms-excel",
+}
+
+_ROLE_AUDIENCE = {
+    "employee": ["all"],
+    "manager":  ["all", "managers"],
+    "hr":       ["all", "managers", "hr"],
+}
+
 # ── Инициализация приложения ──────────────────────────────────────────────────
 
 app = FastAPI(
@@ -1090,7 +1107,11 @@ async def upload_document(
             (file.filename, current_user.email, audience, chunk_count),
         )
         conn.commit()
-        row = conn.execute("SELECT * FROM uploaded_documents WHERE id=?", (cur.lastrowid,)).fetchone()
+        doc_id = cur.lastrowid
+        # Сохраняем оригинальный файл для последующей отдачи
+        suffix = Path(file.filename).suffix.lower()
+        (_UPLOADS_DIR / f"{doc_id}{suffix}").write_bytes(file_bytes)
+        row = conn.execute("SELECT * FROM uploaded_documents WHERE id=?", (doc_id,)).fetchone()
         return dict(row)
     finally:
         conn.close()
@@ -1122,6 +1143,30 @@ def get_documents(current_user: Annotated[UserContext, Depends(get_current_user)
         return [dict(r) for r in rows]
     finally:
         conn.close()
+
+
+@app.get("/documents/{doc_id}/file")
+def get_document_file(
+    doc_id: int,
+    current_user: Annotated[UserContext, Depends(get_current_user)],
+):
+    """Отдать оригинальный файл документа (с проверкой RBAC по audience)."""
+    conn = get_connection()
+    try:
+        row = conn.execute("SELECT * FROM uploaded_documents WHERE id=?", (doc_id,)).fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Документ не найден")
+        allowed = _ROLE_AUDIENCE.get(current_user.role, ["all"])
+        if row["audience"] not in allowed:
+            raise HTTPException(status_code=403, detail="Нет доступа")
+    finally:
+        conn.close()
+    suffix = Path(row["filename"]).suffix.lower()
+    file_path = _UPLOADS_DIR / f"{doc_id}{suffix}"
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Файл не найден на сервере")
+    media_type = _DOC_MEDIA_TYPES.get(suffix, "application/octet-stream")
+    return FileResponse(str(file_path), media_type=media_type, filename=row["filename"])
 
 
 @app.delete("/documents/{doc_id}", status_code=204)
