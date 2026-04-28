@@ -336,7 +336,7 @@ export default function Dashboard({ openChatWithPrompt, navigate, profile }) {
       )}
 
       {/* Рабочий день */}
-      <div ref={workdayRef} className="scroll-mt-24">
+      <div ref={workdayRef} data-tour="employee-workday" className="scroll-mt-24">
         <Card>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>

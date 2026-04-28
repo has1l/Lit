@@ -1,6 +1,7 @@
 import { Bell, LogOut, Moon, Sun } from 'lucide-react';
 import { managerNavItems, navItems } from '../data/mockData.js';
 import { useAuth } from '../store/AuthContext.jsx';
+import EmployeeOnboarding from './EmployeeOnboarding.jsx';
 import Mascot from './Mascot.jsx';
 
 const ROLE_LABEL = {
@@ -58,6 +59,7 @@ export default function Layout({
               <button
                 key={item.id}
                 onClick={() => setActivePage(item.id)}
+                data-tour={viewMode === 'employee' ? `employee-nav-${item.id}` : undefined}
                 className={`fintech-nav-item flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left font-medium ${
                   isActive
                     ? 'fintech-nav-active'
@@ -89,6 +91,7 @@ export default function Layout({
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                data-tour={viewMode === 'employee' ? 'employee-theme-toggle' : undefined}
                 className="fintech-control grid h-11 w-11 place-items-center rounded-2xl transition hover:border-purple-400/40"
                 aria-label="Переключить тему"
               >
@@ -115,6 +118,7 @@ export default function Layout({
 
               <button
                 onClick={logout}
+                data-tour={viewMode === 'employee' ? 'employee-logout' : undefined}
                 className="fintech-control grid h-11 w-11 place-items-center rounded-2xl transition hover:bg-red-500/15 hover:text-red-200"
                 aria-label="Выйти"
                 title="Выйти"
@@ -140,6 +144,7 @@ export default function Layout({
               <button
                 key={item.id}
                 onClick={() => setActivePage(item.id)}
+                data-tour={viewMode === 'employee' ? `employee-nav-${item.id}` : undefined}
                 className={`fintech-nav-item flex min-w-[4.5rem] flex-col items-center gap-1 rounded-2xl px-2 py-2 text-xs font-semibold ${
                   isActive ? 'fintech-nav-active' : ''
                 }`}
@@ -151,6 +156,12 @@ export default function Layout({
           })}
         </div>
       </nav>
+
+      <EmployeeOnboarding
+        activePage={activePage}
+        setActivePage={setActivePage}
+        enabled={viewMode === 'employee'}
+      />
     </div>
   );
 }

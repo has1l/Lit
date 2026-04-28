@@ -1,7 +1,19 @@
 import { Sparkles } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
-const MASCOT_SRC = '/assets/image.png';
+const MASCOT_SOURCES = {
+  default: '/assets/image.png',
+  support: '/assets/image1.png',
+  guide: '/assets/image2.png',
+  bright: '/assets/image3.png',
+};
+
+const IMAGE_CLASSES = {
+  default: 'scale-[1.18] object-cover object-[50%_18%]',
+  support: 'scale-[1.18] object-cover object-[50%_18%]',
+  guide: 'scale-[1.2] object-cover object-[50%_16%]',
+  bright: 'scale-[1.26] object-cover object-[50%_15%]',
+};
 
 const STATE_VARIANTS = {
   idle: {
@@ -43,28 +55,35 @@ const SIZE_MAP = {
   xl: { wrap: 'h-28 w-28', icon: 42 },
 };
 
-export default function Mascot({ state = 'idle', size = 'md', label }) {
-  const variant   = STATE_VARIANTS[state] || STATE_VARIANTS.idle;
+export default function Mascot({ state = 'idle', size = 'md', label, variant = 'default', src }) {
+  const stateVariant = STATE_VARIANTS[state] || STATE_VARIANTS.idle;
   const dimension = SIZE_MAP[size] || SIZE_MAP.md;
+  const imageVariant = MASCOT_SOURCES[variant] ? variant : 'default';
+  const imageSrc = src || MASCOT_SOURCES[imageVariant];
+  const imageClass = IMAGE_CLASSES[imageVariant] || IMAGE_CLASSES.default;
   const [hasImage, setHasImage] = useState(true);
+
+  useEffect(() => {
+    setHasImage(true);
+  }, [imageSrc]);
 
   return (
     <div className="inline-flex items-center gap-3">
       <div
         className={`relative grid place-items-center overflow-hidden rounded-full bg-transparent ring-1 transition-all duration-500
-          ${dimension.wrap} ${variant.ring} ${variant.glow} ${state === 'thinking' ? variant.anim : ''}`}
+          ${dimension.wrap} ${stateVariant.ring} ${stateVariant.glow} ${state === 'thinking' ? stateVariant.anim : ''}`}
         aria-hidden="true"
       >
         {hasImage ? (
           <img
-            src={MASCOT_SRC}
+            src={imageSrc}
             alt=""
-            className="h-full w-full scale-[1.18] object-cover object-[50%_18%]"
+            className={`h-full w-full ${imageClass}`}
             draggable="false"
             onError={() => setHasImage(false)}
           />
         ) : (
-          <div className={`grid h-full w-full place-items-center ${variant.bg} ${variant.anim}`}>
+          <div className={`grid h-full w-full place-items-center ${stateVariant.bg} ${stateVariant.anim}`}>
             <Sparkles className="theme-preserve-dark text-white" size={dimension.icon} strokeWidth={2.4} />
           </div>
         )}

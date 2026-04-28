@@ -315,7 +315,7 @@ export default function Chat({
             <Card className="h-full">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-start gap-3">
-                  <Mascot state="idle" size="md" />
+                  <Mascot state="idle" size="md" variant="support" />
                   <div>
                     <p className="text-xl font-bold text-white">Техна</p>
                     <p className="mt-1 text-sm font-semibold text-slate-400">
@@ -420,7 +420,7 @@ export default function Chat({
     <div className="mx-auto flex h-[calc(100vh-9.5rem)] max-w-4xl flex-col lg:h-[calc(100vh-8rem)]">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Mascot state={mascotState} size="lg" />
+          <Mascot state={mascotState} size="lg" variant="support" />
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-white">Чат с Техной</h1>
             <p className="mt-1 text-slate-400">
@@ -464,6 +464,11 @@ export default function Chat({
             const isUser = message.author === 'user';
             return (
               <div key={message.id} className={`flex animate-fade-in ${isUser ? 'justify-end' : 'justify-start'}`}>
+                {!isUser && (
+                  <div className="mr-3 mt-1 hidden shrink-0 sm:block">
+                    <Mascot state={message.state || 'idle'} size="sm" variant="support" />
+                  </div>
+                )}
                 <div className={`max-w-[82%] sm:max-w-[70%] ${isUser ? '' : 'space-y-3'}`}>
                   <div
                     className={`rounded-[24px] px-5 py-3 text-sm leading-6 ${
@@ -569,6 +574,9 @@ export default function Chat({
 function ThinkingBubble() {
   return (
     <div className="flex animate-fade-in justify-start">
+      <div className="mr-3 mt-1 hidden shrink-0 sm:block">
+        <Mascot state="thinking" size="sm" variant="support" />
+      </div>
       <div className="chat-bubble-peer flex items-center gap-3 rounded-[24px] px-5 py-4">
         <span className="flex gap-1">
           <span className="h-2 w-2 animate-pulse-soft rounded-full bg-purple-400" style={{ animationDelay: '0ms'   }} />
