@@ -64,8 +64,8 @@ OLLAMA_MODEL    = "llama3.1:8b"
 
 _AUDIENCE_BY_ROLE = {
     "employee": ["all"],
-    "manager":  ["all", "manager"],
-    "hr":       ["all", "manager", "hr"],
+    "manager":  ["all", "managers"],
+    "hr":       ["all", "managers", "hr"],
 }
 
 _PAYMENT_TYPE_RU = {"advance": "аванс", "salary": "зарплата"}
