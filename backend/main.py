@@ -749,7 +749,7 @@ def select_daily_tasks(body: SelectDailyBody, current_user: Annotated[UserContex
         conn.commit()
         rows = conn.execute(
             "SELECT ds.id, ds.goal_id, ds.date, ds.completed, ds.completed_at, "
-            "g.title, g.description, g.points FROM daily_selections ds "
+            "g.title, g.description, g.points, g.difficulty FROM daily_selections ds "
             "JOIN goals g ON ds.goal_id=g.id WHERE ds.employee_email=? AND ds.date=?",
             (current_user.email, body.date),
         ).fetchall()
@@ -772,6 +772,23 @@ def complete_daily_task(selection_id: int, current_user: Annotated[UserContext, 
             raise HTTPException(status_code=409, detail="Задача уже выполнена")
         now_str = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
         conn.execute("UPDATE daily_selections SET completed=1, completed_at=? WHERE id=?", (now_str, selection_id))
+        conn.commit()
+        return dict(conn.execute("SELECT * FROM daily_selections WHERE id=?", (selection_id,)).fetchone())
+    finally:
+        conn.close()
+
+
+@app.patch("/goals/daily/{selection_id}/uncomplete")
+def uncomplete_daily_task(selection_id: int, current_user: Annotated[UserContext, Depends(get_current_user)]):
+    conn = get_connection()
+    try:
+        row = conn.execute(
+            "SELECT * FROM daily_selections WHERE id=? AND employee_email=?",
+            (selection_id, current_user.email),
+        ).fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Задача не найдена")
+        conn.execute("UPDATE daily_selections SET completed=0, completed_at=NULL WHERE id=?", (selection_id,))
         conn.commit()
         return dict(conn.execute("SELECT * FROM daily_selections WHERE id=?", (selection_id,)).fetchone())
     finally:

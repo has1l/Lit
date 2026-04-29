@@ -26,6 +26,9 @@ export const selectDailyTasks = (goal_ids, date) =>
 export const completeDailyTask = (selection_id) =>
   apiFetch(`/goals/daily/${selection_id}/complete`, { method: 'PATCH' });
 
+export const uncompleteDailyTask = (selection_id) =>
+  apiFetch(`/goals/daily/${selection_id}/uncomplete`, { method: 'PATCH' });
+
 export const finishDay = (date) =>
   apiFetch('/goals/daily/finish', { method: 'POST', body: { date } });
 
