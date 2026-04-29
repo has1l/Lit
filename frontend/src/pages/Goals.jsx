@@ -93,7 +93,6 @@ export default function Goals() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h2 className="text-xl font-bold text-white">Список целей</h2>
-              <p className="mt-2 text-slate-400">План от руководителя без лишней геймификации.</p>
             </div>
             <span className="status-chip w-fit rounded-full px-3 py-1 text-sm font-semibold">
               {goals.length} в плане
