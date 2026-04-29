@@ -609,16 +609,52 @@
     --shadow-card: 0 12px 30px rgba(0, 0, 0, 0.20);
   }
 
+  html,
+  body,
+  #root {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
   body {
     font-size: 14px;
   }
 
   .fintech-surface, .metric-card {
     padding: 1rem !important;
+    border-radius: 20px !important;
   }
 
   h1 { font-size: 1.5rem !important; }
   h2 { font-size: 1.25rem !important; }
+
+  button,
+  a,
+  input,
+  textarea {
+    min-width: 0;
+  }
+
+  .fintech-topbar {
+    min-height: 4rem;
+  }
+
+  .fintech-mobile-nav {
+    padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
+  }
+
+  .fintech-mobile-nav .fintech-nav-item {
+    min-width: 3.75rem !important;
+    max-width: 4.5rem;
+    border-radius: 16px !important;
+    letter-spacing: 0.02em !important;
+  }
+
+  .fintech-mobile-nav .fintech-nav-item svg {
+    width: 18px;
+    height: 18px;
+  }
 
   .chat-bubble-user, .chat-bubble-peer {
     max-width: 90% !important;
@@ -630,10 +666,6 @@
     padding: 1.25rem !important;
   }
 
-  .fintech-mobile-nav {
-    padding-bottom: env(safe-area-inset-bottom, 1rem);
-  }
-
   .fintech-input {
     min-height: 44px;
     font-size: 16px !important; /* Prevent iOS zoom on focus */
@@ -643,6 +675,43 @@
     padding-left: 0.5rem !important;
     padding-right: 0.5rem !important;
     font-size: 11px !important;
+  }
+
+  .fixed.inset-0.z-50 {
+    align-items: end;
+    padding: 0.75rem !important;
+  }
+
+  .fixed.inset-0.z-50 .fintech-surface {
+    max-height: calc(100dvh - 1.5rem);
+    width: 100%;
+    overflow-y: auto;
+  }
+
+  .rounded-3xl {
+    border-radius: 22px !important;
+  }
+
+  .rounded-\[24px\] {
+    border-radius: 20px !important;
+  }
+
+  .rounded-\[22px\] {
+    border-radius: 18px !important;
+  }
+
+  .max-w-4xl,
+  .max-w-5xl,
+  .max-w-7xl {
+    max-width: 100% !important;
+  }
+
+  .metric-label {
+    letter-spacing: 0.03em;
+  }
+
+  .metric-value {
+    line-height: 1.05;
   }
 }
 

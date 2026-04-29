@@ -423,7 +423,7 @@ export default function Chat({
   // ── UI: peer-чат ──────────────────────────────────────────────────────────
   if (chatMode === 'peer' && selectedContact) {
     return (
-      <div className="mx-auto flex h-[calc(100dvh-12rem)] max-w-4xl flex-col sm:h-[calc(100vh-9.5rem)] lg:h-[calc(100vh-8rem)]">
+      <div className="mx-auto flex h-[calc(100dvh-9.5rem)] max-w-4xl flex-col sm:h-[calc(100vh-9.5rem)] lg:h-[calc(100vh-8rem)]">
         <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="flex items-center gap-3">
             <div className="icon-tile h-11 w-11 shrink-0 rounded-2xl text-sm font-bold">
@@ -440,7 +440,8 @@ export default function Chat({
           </div>
           <Button variant="secondary" onClick={() => setChatMode('select')}>
             <ChevronLeft size={16} />
-            Все чаты
+            <span className="hidden sm:inline">Все чаты</span>
+            <span className="sm:hidden">Чаты</span>
           </Button>
         </div>
 
@@ -499,8 +500,8 @@ export default function Chat({
   const mascotState = isThinking ? 'thinking' : (lastAssistant?.state || 'idle');
 
   return (
-    <div className="mx-auto flex h-[calc(100dvh-11rem)] max-w-4xl flex-col sm:h-[calc(100vh-9.5rem)] lg:h-[calc(100vh-8rem)]">
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
+    <div className="mx-auto flex h-[calc(100dvh-9.5rem)] max-w-4xl flex-col sm:h-[calc(100vh-9.5rem)] lg:h-[calc(100vh-8rem)]">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3 sm:mb-5 sm:gap-4">
         <div className="flex items-center gap-4">
           <div className="hidden sm:block">
             <Mascot state={mascotState} size="lg" variant="support" />
@@ -522,7 +523,8 @@ export default function Chat({
             disabled={isThinking || messages.length <= 1}
             onClick={() => setMessages([WELCOME_MESSAGE])}
           >
-            Новый диалог
+            <span className="hidden sm:inline">Новый диалог</span>
+            <span className="sm:hidden">Новый</span>
           </Button>
         </div>
       </div>

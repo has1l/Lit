@@ -1,4 +1,5 @@
-import { Bell, LogOut, Moon, Sun } from 'lucide-react';
+import { Bell, LogOut, Menu, Moon, Sun } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { managerNavItems, navItems } from '../data/mockData.js';
 import { useAuth } from '../store/AuthContext.jsx';
 import EmployeeOnboarding from './EmployeeOnboarding.jsx';
@@ -34,7 +35,22 @@ export default function Layout({
   profile,
 }) {
   const { logout } = useAuth();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const visibleNavItems = viewMode === 'manager' ? managerNavItems : navItems;
+  const mobileNavItems = useMemo(() => {
+    const items = visibleNavItems.filter((item) => !item.divider);
+    const primaryIds = viewMode === 'manager'
+      ? ['team', 'store', 'chat', 'documents']
+      : ['dashboard', 'goals', 'store', 'chat'];
+    const primary = primaryIds.map((id) => items.find((item) => item.id === id)).filter(Boolean);
+    const more = items.filter((item) => !primaryIds.includes(item.id));
+    return { primary, more };
+  }, [viewMode, visibleNavItems]);
+
+  function openPage(pageId) {
+    setActivePage(pageId);
+    setMobileMenuOpen(false);
+  }
 
   return (
     <div className="min-h-screen lg:flex">
@@ -58,7 +74,7 @@ export default function Layout({
             return (
               <button
                 key={item.id}
-                onClick={() => setActivePage(item.id)}
+                onClick={() => openPage(item.id)}
                 data-tour={viewMode === 'employee' ? `employee-nav-${item.id}` : undefined}
                 className={`fintech-nav-item flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left font-medium ${
                   isActive
@@ -77,7 +93,7 @@ export default function Layout({
 
       {/* ─── Content + topbar ────────────────────────────────────── */}
       <div className="flex min-h-screen flex-1 flex-col lg:pl-72">
-        <header className="fintech-topbar sticky top-0 z-20 border-b px-3 py-3 sm:px-6 lg:px-8">
+        <header className="fintech-topbar fixed inset-x-0 top-0 z-40 border-b px-3 py-2.5 sm:px-6 sm:py-3 lg:sticky lg:inset-x-auto lg:z-20 lg:px-8">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
             <div className="lg:hidden">
               <div className="flex items-center gap-2">
@@ -91,7 +107,7 @@ export default function Layout({
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               <button
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                 data-tour={viewMode === 'employee' ? 'employee-theme-toggle' : undefined}
@@ -132,23 +148,58 @@ export default function Layout({
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-7xl flex-1 px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-10">
+        <main className="mx-auto w-full max-w-7xl flex-1 px-3 pb-28 pt-24 sm:px-6 sm:pt-24 lg:px-8 lg:pb-10 lg:pt-6">
           {children}
         </main>
       </div>
 
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-40 lg:hidden">
+          <button
+            type="button"
+            className="absolute inset-0 bg-slate-950/45 backdrop-blur-[2px]"
+            aria-label="Закрыть меню"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          <div className="fintech-panel absolute inset-x-3 bottom-24 rounded-3xl p-3 shadow-2xl">
+            <p className="px-2 pb-2 text-xs font-semibold uppercase tracking-widest text-slate-500">
+              Разделы
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {mobileNavItems.more.map((item) => {
+                const Icon = item.icon;
+                const isActive = activePage === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => openPage(item.id)}
+                    data-tour={viewMode === 'employee' ? `employee-nav-${item.id}` : undefined}
+                    className={`fintech-nav-item flex items-center gap-2 rounded-2xl px-3 py-3 text-left text-sm font-semibold ${
+                      isActive ? 'fintech-nav-active' : ''
+                    }`}
+                  >
+                    <Icon size={18} />
+                    {item.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ─── Mobile bottom-nav ───────────────────────────────────── */}
-      <nav className="fintech-mobile-nav fixed inset-x-0 bottom-0 z-40 border-t px-2 py-2 shadow-[0_-10px_35px_rgba(0,0,0,0.18)] lg:hidden">
-        <div className="no-scrollbar mx-auto flex max-w-md gap-0.5 overflow-x-auto pb-1">
-          {visibleNavItems.filter((item) => !item.divider).map((item) => {
+      <nav className="fintech-mobile-nav fixed inset-x-0 bottom-0 z-50 border-t px-1.5 py-2 shadow-[0_-10px_35px_rgba(0,0,0,0.18)] lg:hidden">
+        <div className="mx-auto grid max-w-md grid-cols-5 gap-0.5 pb-1">
+          {mobileNavItems.primary.map((item) => {
             const Icon = item.icon;
             const isActive = activePage === item.id;
             return (
               <button
                 key={item.id}
-                onClick={() => setActivePage(item.id)}
+                onClick={() => openPage(item.id)}
                 data-tour={viewMode === 'employee' ? `employee-nav-${item.id}` : undefined}
-                className={`fintech-nav-item flex min-w-[4.25rem] flex-1 flex-col items-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-bold uppercase tracking-wider transition-all duration-200 ${
+                className={`fintech-nav-item flex min-w-0 flex-col items-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-bold uppercase tracking-wider transition-all duration-200 ${
                   isActive ? 'fintech-nav-active' : 'opacity-70'
                 }`}
               >
@@ -157,6 +208,16 @@ export default function Layout({
               </button>
             );
           })}
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen((current) => !current)}
+            className={`fintech-nav-item flex min-w-0 flex-col items-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-bold uppercase tracking-wider transition-all duration-200 ${
+              mobileMenuOpen || mobileNavItems.more.some((item) => item.id === activePage) ? 'fintech-nav-active' : 'opacity-70'
+            }`}
+          >
+            <Menu size={mobileMenuOpen ? 22 : 20} className="transition-transform duration-200" />
+            Ещё
+          </button>
         </div>
       </nav>
 

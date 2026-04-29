@@ -453,7 +453,7 @@ export default function Dashboard({ openChatWithPrompt, navigate, profile }) {
                     const dr = DIFF_RING[goal.difficulty] || DIFF_RING.medium;
                     return (
                       <button key={goal.id} type="button" onClick={() => toggleGoalSelect(goal.id)}
-                        className={`flex items-center gap-3 rounded-2xl border p-4 text-left transition ${
+                        className={`flex flex-wrap items-center gap-3 rounded-2xl border p-4 text-left transition sm:flex-nowrap ${
                           selected
                             ? 'border-purple-400/50 bg-purple-600/12'
                             : 'border-slate-700 bg-slate-950/35 hover:border-slate-600'
@@ -526,7 +526,7 @@ export default function Dashboard({ openChatWithPrompt, navigate, profile }) {
                     const dl = DIFF_LABEL[task.difficulty];
                     return (
                       <div key={task.id}
-                        className={`flex items-center gap-3 rounded-3xl border p-4 transition ${
+                        className={`flex flex-wrap items-center gap-3 rounded-3xl border p-4 transition sm:flex-nowrap ${
                           isActive
                             ? 'border-purple-400/60 bg-purple-600/15'
                             : isCompleted

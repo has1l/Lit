@@ -136,7 +136,7 @@ export default function Goals() {
                         <p className="mt-2 text-sm leading-6 text-slate-400">{goal.description}</p>
                       )}
                     </div>
-                    <div className="shrink-0 rounded-2xl bg-slate-950/55 px-4 py-3 text-right ring-1 ring-slate-700">
+                    <div className="w-full shrink-0 rounded-2xl bg-slate-950/55 px-4 py-3 text-left ring-1 ring-slate-700 sm:w-auto sm:text-right">
                       <p className="text-2xl font-bold text-white">{goal.points}</p>
                       <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">баллов</p>
                     </div>

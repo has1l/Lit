@@ -154,7 +154,7 @@ export default function Store() {
     <div className="space-y-5">
       {/* Toast */}
       {toast && (
-        <div className={`fixed bottom-6 right-6 z-50 rounded-2xl px-5 py-3 text-sm font-semibold shadow-xl ${
+        <div className={`fixed inset-x-3 bottom-24 z-50 rounded-2xl px-5 py-3 text-sm font-semibold shadow-xl sm:inset-x-auto sm:bottom-6 sm:right-6 ${
           toast.ok ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
         }`}>
           {toast.msg}
@@ -183,7 +183,7 @@ export default function Store() {
       </Card>
 
       {/* Вкладки */}
-      <div className="flex gap-2">
+      <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
         <button
           onClick={() => setTab('shop')}
           className={`rounded-2xl px-4 py-2 text-sm font-semibold transition ${
@@ -224,7 +224,7 @@ export default function Store() {
         <div className="space-y-4">
           {isManager && (
             <div className="flex justify-end">
-              <Button onClick={() => setShowAdd(true)} className="gap-2">
+              <Button onClick={() => setShowAdd(true)} className="w-full gap-2 sm:w-auto">
                 <Plus size={16} />Добавить товар
               </Button>
             </div>
@@ -272,7 +272,7 @@ export default function Store() {
                       </div>
                     </div>
 
-                    <div className="mt-4 flex items-center justify-between gap-2">
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
                       <div>
                         <span className="text-2xl font-bold text-white">{item.cost_points}</span>
                         <span className="ml-1 text-xs font-semibold uppercase tracking-widest text-slate-400">очков</span>
@@ -331,7 +331,7 @@ export default function Store() {
                       {isManager ? req.employee_name : 'Вы'} · {req.cost_points} очков · {req.created_at?.slice(0, 10)}
                     </p>
                   </div>
-                  <div className="flex shrink-0 items-center gap-2">
+                  <div className="flex shrink-0 flex-wrap items-center gap-2 sm:flex-nowrap">
                     {req.status === 'pending' ? (
                       isManager ? (
                         <>
