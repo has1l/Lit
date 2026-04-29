@@ -28,7 +28,7 @@ from database import get_connection
 
 CHROMA_PATH      = Path(__file__).parent / "chroma_db"
 EMBED_MODEL      = "paraphrase-multilingual-MiniLM-L12-v2"
-VECTOR_THRESHOLD = 10.0
+VECTOR_THRESHOLD = 30.0
 
 _embed_model = None
 _chroma_coll = None
@@ -254,6 +254,31 @@ def _get_payments_block(email: str, user_email: str, user_role: str) -> str:
 
 # ── RAG: поиск по ПВТР ───────────────────────────────────────────────────────
 
+_QUERY_EXPANSIONS: dict[str, list[str]] = {
+    "удалён": ["дистанционная работа условия", "удалённая работа правила"],
+    "дистанц": ["удалённая работа условия", "дистанционная работа правила"],
+    "отпуск": ["ежегодный оплачиваемый отпуск дни", "время отдыха отпуск"],
+    "зарплат": ["оплата труда выплата", "заработная плата сроки"],
+    "аванс": ["оплата труда первая половина месяца", "заработная плата аванс"],
+    "график": ["режим рабочего времени", "рабочий день часы"],
+    "диспансер": ["диспансеризация рабочий день освобождение"],
+    "дисциплин": ["дисциплинарное взыскание нарушение", "ответственность трудовая дисциплина"],
+    "поощрен": ["поощрения премия благодарность"],
+    "увольн": ["порядок увольнения расторжение трудового договора"],
+    "охрана труда": ["охрана труда обязанности работника"],
+}
+
+
+def _expand_queries(query: str) -> list[str]:
+    queries = [query]
+    q_lower = query.lower()
+    for keyword, expansions in _QUERY_EXPANSIONS.items():
+        if keyword in q_lower:
+            queries.extend(expansions)
+            break
+    return queries
+
+
 def _search_docs(query: str, user_role: str) -> tuple[str, list[str], str, int, str]:
     """Returns (doc_text, sources, source_filename) — source_filename used to locate the DB record."""
     allowed = _AUDIENCE_BY_ROLE.get(user_role, ["all"])
@@ -264,18 +289,24 @@ def _search_docs(query: str, user_role: str) -> tuple[str, list[str], str, int, 
 
     if coll is not None:
         try:
-            vec = _get_embed_model().encode([query])[0].tolist()
-            raw = coll.query(
-                query_embeddings=[vec], n_results=5,
-                where={"audience": {"$in": allowed}},
-                include=["documents", "metadatas", "distances"],
-            )
-            chunks = [
-                (doc, meta, dist)
-                for doc, meta, dist in zip(raw["documents"][0], raw["metadatas"][0], raw["distances"][0])
-                if dist <= VECTOR_THRESHOLD
-            ]
-            chunks.sort(key=lambda x: x[2])
+            queries = _expand_queries(query)
+            model = _get_embed_model()
+            seen_docs: set[str] = set()
+            all_chunks: list[tuple[str, dict, float]] = []
+
+            for q in queries:
+                vec = model.encode([q])[0].tolist()
+                raw = coll.query(
+                    query_embeddings=[vec], n_results=5,
+                    where={"audience": {"$in": allowed}},
+                    include=["documents", "metadatas", "distances"],
+                )
+                for doc, meta, dist in zip(raw["documents"][0], raw["metadatas"][0], raw["distances"][0]):
+                    if dist <= VECTOR_THRESHOLD and doc not in seen_docs:
+                        seen_docs.add(doc)
+                        all_chunks.append((doc, meta, dist))
+
+            chunks = sorted(all_chunks, key=lambda x: x[2])
             if chunks:
                 parts, sources = [], []
                 best_meta = chunks[0][1]
@@ -340,7 +371,7 @@ _SYSTEM = """\
 1. Отвечай ТОЛЬКО на основе блоков «Данные сотрудника», «Данные о коллеге» и «HR-документы» из контекста.
 2. НИКОГДА не придумывай цифры, даты, имена, суммы — только то что есть в контексте.
 3. Сноску «> Основание:» ставь ТОЛЬКО если в блоке «HR-документы» есть строка «Основание:». Копируй дословно.
-4. Если в контексте нет ответа — скажи: «По этому вопросу информации нет, обратитесь в HR-отдел».
+4. Если в блоке «HR-документы» есть связанная информация — синтезируй ответ из неё, даже если ответ косвенный. Говори «По этому вопросу информации нет, обратитесь в HR-отдел» ТОЛЬКО если контекст совсем не связан с вопросом.
 5. Если написано «информация конфиденциальна» — так и отвечай, без догадок.
 6. Не подписывайся — это чат, не письмо.
 7. Адаптируй язык под должность:

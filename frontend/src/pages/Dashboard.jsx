@@ -610,12 +610,6 @@ export default function Dashboard({ openChatWithPrompt, navigate, profile }) {
                       <span className="font-bold">Бонус ×1.5 — все задачи! +{dayResult.points_earned} pts</span>
                     </div>
                   )}
-                  {dayResult.streak_bonus && (
-                    <div className="flex items-center gap-2 text-orange-300">
-                      <Trophy size={16} />
-                      <span className="font-bold">Стрик-бонус +20% — {dayResult.streak} дней подряд!</span>
-                    </div>
-                  )}
                   {!dayResult.bonus && !dayResult.penalty && dayResult.points_earned > 0 && (
                     <p className="text-purple-200">+{dayResult.points_earned} pts заработано</p>
                   )}
