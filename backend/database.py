@@ -199,6 +199,21 @@ def init_db() -> None:
         )
     """)
 
+    # ── База знаний: ресурсы компании ────────────────────────────────────────
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS company_resources (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            title       TEXT    NOT NULL,
+            description TEXT    NOT NULL DEFAULT '',
+            url         TEXT    NOT NULL,
+            audience    TEXT    NOT NULL DEFAULT 'all',
+            added_by    TEXT    NOT NULL REFERENCES employees(email),
+            chroma_id   TEXT    NOT NULL DEFAULT '',
+            created_at  TEXT    NOT NULL
+                DEFAULT (strftime('%Y-%m-%dT%H:%M:%S', 'now', 'localtime'))
+        )
+    """)
+
     # ── Магазин наград ────────────────────────────────────────────────────────
     cur.execute("""
         CREATE TABLE IF NOT EXISTS reward_items (

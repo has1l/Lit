@@ -119,14 +119,15 @@ class ChatRequest(BaseModel):
 
 
 class ChatResponse(BaseModel):
-    answer:      str
-    sources:     list[str]
-    steps:       int
-    user:        str
-    escalate:    bool = False
-    doc_id:      int | None = None
-    doc_page:    int = 0
-    doc_section: str = ""
+    answer:       str
+    sources:      list[str]
+    steps:        int
+    user:         str
+    escalate:     bool = False
+    doc_id:       int | None = None
+    doc_page:     int = 0
+    doc_section:  str = ""
+    resource_url: str | None = None
 
 
 # ── Маршруты ──────────────────────────────────────────────────────────────────
@@ -165,6 +166,7 @@ async def chat(
         doc_id=result.get("doc_id"),
         doc_page=result.get("doc_page", 0),
         doc_section=result.get("doc_section", ""),
+        resource_url=result.get("resource_url") or None,
     )
 
 
@@ -849,6 +851,17 @@ def finish_day(body: FinishDayBody, current_user: Annotated[UserContext, Depends
             "completion_rate": round(rate * 100),
             "streak_bonus": streak_bonus,
         }
+    finally:
+        conn.close()
+
+
+@app.delete("/goals/daily/reset")
+def reset_day(date: str, current_user: Annotated[UserContext, Depends(get_current_user)]):
+    conn = get_connection()
+    try:
+        conn.execute("DELETE FROM daily_selections WHERE employee_email=? AND date=?", (current_user.email, date))
+        conn.commit()
+        return {"ok": True}
     finally:
         conn.close()
 
@@ -1621,6 +1634,131 @@ def delete_document(
             raise HTTPException(status_code=403, detail="Нет доступа")
         conn.execute("DELETE FROM uploaded_documents WHERE id=?", (doc_id,))
         conn.commit()
+    finally:
+        conn.close()
+
+
+
+# ── База знаний: ресурсы компании ────────────────────────────────────────────
+
+class CreateResourceBody(BaseModel):
+    title:       str
+    description: str = ""
+    url:         str
+    audience:    str = "all"
+
+
+def _index_resource(resource_id: int, title: str, description: str, url: str, audience: str) -> str:
+    """Индексирует ресурс в ChromaDB. Возвращает chroma_id или ''."""
+    try:
+        from agent import _get_embed_model, _get_chroma
+        coll = _get_chroma()
+        if coll is None:
+            return ""
+        model = _get_embed_model()
+        text = f"{title}\n\n{description}" if description else title
+        vec = model.encode([text])[0].tolist()
+        chroma_id = f"resource_{resource_id}"
+        coll.upsert(
+            ids=[chroma_id],
+            embeddings=[vec],
+            documents=[text],
+            metadatas=[{
+                "type": "resource",
+                "resource_id": str(resource_id),
+                "title": title,
+                "url": url,
+                "audience": audience,
+                "source_file": "",
+                "section": title,
+                "page_number": "0",
+            }],
+        )
+        return chroma_id
+    except Exception as e:
+        print(f"[CHROMA] resource index error: {e}")
+        return ""
+
+
+@app.post("/resources", status_code=201)
+def create_resource(
+    body: CreateResourceBody,
+    current_user: Annotated[UserContext, Depends(get_current_user)],
+):
+    """Добавить ресурс в базу знаний (hr или manager)."""
+    if current_user.role not in ("hr", "manager"):
+        raise HTTPException(status_code=403, detail="Нет доступа")
+    if not body.title.strip():
+        raise HTTPException(status_code=400, detail="Название обязательно")
+    if not body.url.strip():
+        raise HTTPException(status_code=400, detail="URL обязателен")
+    if body.audience not in ("all", "managers", "hr"):
+        raise HTTPException(status_code=400, detail="audience: all | managers | hr")
+
+    conn = get_connection()
+    try:
+        cur = conn.execute(
+            "INSERT INTO company_resources (title, description, url, audience, added_by) VALUES (?,?,?,?,?)",
+            (body.title.strip(), body.description.strip(), body.url.strip(), body.audience, current_user.email),
+        )
+        conn.commit()
+        resource_id = cur.lastrowid
+        chroma_id = _index_resource(resource_id, body.title.strip(), body.description.strip(), body.url.strip(), body.audience)
+        conn.execute("UPDATE company_resources SET chroma_id=? WHERE id=?", (chroma_id, resource_id))
+        conn.commit()
+        row = conn.execute(
+            "SELECT r.*, e.full_name AS adder_name FROM company_resources r "
+            "LEFT JOIN employees e ON r.added_by = e.email WHERE r.id=?",
+            (resource_id,),
+        ).fetchone()
+        return dict(row)
+    finally:
+        conn.close()
+
+
+@app.get("/resources")
+def get_resources(current_user: Annotated[UserContext, Depends(get_current_user)]):
+    """Список ресурсов базы знаний (с фильтрацией по audience)."""
+    allowed = _ROLE_AUDIENCE.get(current_user.role, ["all"])
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            "SELECT r.*, e.full_name AS adder_name FROM company_resources r "
+            "LEFT JOIN employees e ON r.added_by = e.email "
+            f"WHERE r.audience IN ({','.join('?' * len(allowed))}) ORDER BY r.created_at DESC",
+            allowed,
+        ).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+@app.delete("/resources/{resource_id}", status_code=204)
+def delete_resource(
+    resource_id: int,
+    current_user: Annotated[UserContext, Depends(get_current_user)],
+):
+    """Удалить ресурс (hr — любой, manager — только свои)."""
+    if current_user.role not in ("hr", "manager"):
+        raise HTTPException(status_code=403, detail="Нет доступа")
+    conn = get_connection()
+    try:
+        row = conn.execute("SELECT * FROM company_resources WHERE id=?", (resource_id,)).fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Ресурс не найден")
+        if current_user.role == "manager" and row["added_by"] != current_user.email:
+            raise HTTPException(status_code=403, detail="Нет доступа")
+        chroma_id = row["chroma_id"]
+        conn.execute("DELETE FROM company_resources WHERE id=?", (resource_id,))
+        conn.commit()
+        if chroma_id:
+            try:
+                from agent import _get_chroma
+                coll = _get_chroma()
+                if coll:
+                    coll.delete(ids=[chroma_id])
+            except Exception as e:
+                print(f"[CHROMA] resource delete error: {e}")
     finally:
         conn.close()
 

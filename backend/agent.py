@@ -279,13 +279,13 @@ def _expand_queries(query: str) -> list[str]:
     return queries
 
 
-def _search_docs(query: str, user_role: str) -> tuple[str, list[str], str, int, str]:
-    """Returns (doc_text, sources, source_filename) — source_filename used to locate the DB record."""
+def _search_docs(query: str, user_role: str) -> tuple[str, list[str], str, int, str, str]:
+    """Returns (doc_text, sources, source_filename, source_page, source_section, resource_url)."""
     allowed = _AUDIENCE_BY_ROLE.get(user_role, ["all"])
     coll = _get_chroma()
 
     if coll is None:
-        return "", [], "", 0, ""
+        return "", [], "", 0, "", ""
 
     if coll is not None:
         try:
@@ -313,7 +313,10 @@ def _search_docs(query: str, user_role: str) -> tuple[str, list[str], str, int, 
                 source_filename = best_meta.get("source_file", "")
                 source_page = int(best_meta.get("page_number", 0) or 0)
                 source_section = best_meta.get("section", "")
+                resource_url = ""
                 for doc, meta, _ in chunks[:3]:
+                    if meta.get("type") == "resource" and not resource_url:
+                        resource_url = meta.get("url", "")
                     section = meta.get("section", "").strip()
                     title = meta.get("title", "").strip()
                     cite = f"{section} · {title}" if section and title else (section or title)
@@ -321,10 +324,10 @@ def _search_docs(query: str, user_role: str) -> tuple[str, list[str], str, int, 
                     src = f"Основание: {cite}"
                     if src not in sources:
                         sources.append(src)
-                return "\n\n---\n\n".join(parts), sources, source_filename, source_page, source_section
+                return "\n\n---\n\n".join(parts), sources, source_filename, source_page, source_section, resource_url
         except Exception as e:
             print(f"[CHROMA] {e}")
-            return "", [], "", 0, ""
+            return "", [], "", 0, "", ""
 
     # FTS fallback
     try:
@@ -356,9 +359,9 @@ def _search_docs(query: str, user_role: str) -> tuple[str, list[str], str, int, 
             src = f"Основание: {cite}"
             if src not in sources:
                 sources.append(src)
-        return "\n\n---\n\n".join(parts), sources, "", 0, relevant[0]["section"] if relevant else ""
+        return "\n\n---\n\n".join(parts), sources, "", 0, relevant[0]["section"] if relevant else "", ""
     except Exception:
-        return "", [], "", 0, ""
+        return "", [], "", 0, "", ""
 
 
 # ── Системный промпт ──────────────────────────────────────────────────────────
@@ -422,7 +425,7 @@ async def run_agent(
             context_parts.append(f"=== Данные о коллеге ({colleague['full_name']}) ===\n{col_ctx}")
 
     # — ПВТР / HR-документы —
-    doc_text, doc_sources, doc_source_file, doc_source_page, doc_source_section = _search_docs(message, user_role)
+    doc_text, doc_sources, doc_source_file, doc_source_page, doc_source_section, doc_resource_url = _search_docs(message, user_role)
     if doc_text:
         context_parts.append(f"=== HR-документы ===\n{doc_text}")
 
@@ -493,11 +496,12 @@ async def run_agent(
             pass
 
     return {
-        "answer":   final_answer,
-        "sources":  sources,
-        "steps":    2 + (1 if doc_text else 0) + (1 if colleague else 0),
-        "escalate": escalate,
-        "doc_id":      doc_id,
-        "doc_page":    doc_source_page if doc_id else 0,
-        "doc_section": doc_source_section if doc_id else "",
+        "answer":       final_answer,
+        "sources":      sources,
+        "steps":        2 + (1 if doc_text else 0) + (1 if colleague else 0),
+        "escalate":     escalate,
+        "doc_id":       doc_id,
+        "doc_page":     doc_source_page if doc_id else 0,
+        "doc_section":  doc_source_section if doc_id else "",
+        "resource_url": doc_resource_url,
     }

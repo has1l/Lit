@@ -249,10 +249,11 @@ export default function Chat({
           sources: response.sources || [],
           escalate: response.escalate ?? false,
           actions: (response.sources?.length ?? 0) > 0,
-          doc_id:      response.doc_id ?? null,
-          doc_page:    response.doc_page ?? 0,
-          doc_section: response.doc_section ?? '',
-          fresh:       true,
+          doc_id:       response.doc_id ?? null,
+          doc_page:     response.doc_page ?? 0,
+          doc_section:  response.doc_section ?? '',
+          resource_url: response.resource_url ?? null,
+          fresh:        true,
         },
       ]);
     } catch (err) {
@@ -599,7 +600,7 @@ export default function Chat({
                     </div>
                   )}
 
-                  {!isUser && (message.escalate || message.actions) && (
+                  {!isUser && (message.escalate || message.actions || message.resource_url) && (
                     <div className="flex flex-wrap gap-2">
                       {message.escalate && (
                         <Button
@@ -610,7 +611,17 @@ export default function Chat({
                           Отправить вопрос в HR
                         </Button>
                       )}
-                      {message.actions && (
+                      {message.resource_url && (
+                        <a
+                          href={message.resource_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 rounded-2xl bg-green-500/10 px-4 py-2 text-sm font-semibold text-green-300 ring-1 ring-green-400/30 transition hover:bg-green-500/20"
+                        >
+                          Открыть ресурс →
+                        </a>
+                      )}
+                      {message.actions && !message.resource_url && (
                         message.doc_id ? (
                           <Button
                             variant="secondary"
