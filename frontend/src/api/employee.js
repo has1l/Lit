@@ -19,6 +19,6 @@ export function fetchEmployeeProfile(email) {
 export function updateMyStatus(status, currentTask = '') {
   return apiFetch('/me/status', {
     method: 'PUT',
-    body: JSON.stringify({ status, current_task: currentTask }),
+    body: { status, current_task: currentTask },
   });
 }
