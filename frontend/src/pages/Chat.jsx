@@ -423,14 +423,14 @@ export default function Chat({
   // ── UI: peer-чат ──────────────────────────────────────────────────────────
   if (chatMode === 'peer' && selectedContact) {
     return (
-      <div className="mx-auto flex h-[calc(100dvh-9.5rem)] max-w-4xl flex-col sm:h-[calc(100vh-9.5rem)] lg:h-[calc(100vh-8rem)]">
-        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div data-chat-shell className="chat-open-shell mx-auto flex h-[calc(100dvh-9.5rem)] max-w-4xl flex-col sm:h-[calc(100vh-9.5rem)] lg:h-[calc(100vh-8rem)]">
+        <div className="chat-open-header mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="flex items-center gap-3">
             <div className="icon-tile h-11 w-11 shrink-0 rounded-2xl text-sm font-bold">
               {initials(selectedContact.full_name)}
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-white">
+              <h1 className="chat-open-title text-2xl font-bold tracking-tight text-white">
                 {selectedContact.full_name}
               </h1>
               <p className="text-sm text-slate-400">
@@ -445,8 +445,8 @@ export default function Chat({
           </Button>
         </div>
 
-        <Card className="flex min-h-0 flex-1 flex-col p-0">
-          <div ref={peerListRef} className="no-scrollbar flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
+        <Card className="chat-open-card flex min-h-0 flex-1 flex-col p-0">
+          <div data-chat-messages ref={peerListRef} className="chat-message-list no-scrollbar flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
             {peerMessages.length === 0 && (
               <p className="py-6 text-center text-sm text-slate-500">
                 Начните переписку — напишите первое сообщение
@@ -471,7 +471,7 @@ export default function Chat({
             })}
           </div>
 
-          <form onSubmit={sendPeer} className="border-t border-slate-800 p-3 sm:p-4">
+          <form onSubmit={sendPeer} className="chat-compose border-t border-slate-800 p-3 sm:p-4">
             <div className="fintech-control flex items-center gap-2 rounded-2xl p-2">
               <input
                 value={peerText}
@@ -500,14 +500,14 @@ export default function Chat({
   const mascotState = isThinking ? 'thinking' : (lastAssistant?.state || 'idle');
 
   return (
-    <div className="mx-auto flex h-[calc(100dvh-9.5rem)] max-w-4xl flex-col sm:h-[calc(100vh-9.5rem)] lg:h-[calc(100vh-8rem)]">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3 sm:mb-5 sm:gap-4">
+    <div data-chat-shell className="chat-open-shell mx-auto flex h-[calc(100dvh-9.5rem)] max-w-4xl flex-col sm:h-[calc(100vh-9.5rem)] lg:h-[calc(100vh-8rem)]">
+      <div className="chat-open-header mb-3 flex flex-wrap items-center justify-between gap-3 sm:mb-5 sm:gap-4">
         <div className="flex items-center gap-4">
           <div className="hidden sm:block">
             <Mascot state={mascotState} size="lg" variant="support" />
           </div>
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-white sm:text-3xl">Чат с Техной</h1>
+            <h1 className="chat-open-title text-xl font-bold tracking-tight text-white sm:text-3xl">Чат с Техной</h1>
             <p className="mt-1 text-xs text-slate-400 sm:text-sm">
               {isThinking ? 'Ищу ответ в регламентах…' : 'Задайте вопрос или выберите сценарий'}
             </p>
@@ -529,8 +529,8 @@ export default function Chat({
         </div>
       </div>
 
-      <Card className="flex min-h-0 flex-1 flex-col p-0">
-        <div className="border-b border-slate-800 p-3 sm:p-4">
+      <Card className="chat-open-card flex min-h-0 flex-1 flex-col p-0">
+        <div className="chat-quick-row border-b border-slate-800 p-3 sm:p-4">
           <div className="no-scrollbar flex gap-2 overflow-x-auto">
             {quickQuestions.map((item) => (
               <button
@@ -545,7 +545,7 @@ export default function Chat({
           </div>
         </div>
 
-        <div ref={listRef} className="no-scrollbar flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
+        <div data-chat-messages ref={listRef} className="chat-message-list no-scrollbar flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
           {messages.map((message) => {
             const isUser = message.author === 'user';
             return (
@@ -648,7 +648,7 @@ export default function Chat({
           {isThinking && <ThinkingBubble />}
         </div>
 
-        <form onSubmit={sendToAssistant} className="border-t border-slate-800 p-3 sm:p-4">
+        <form onSubmit={sendToAssistant} className="chat-compose border-t border-slate-800 p-3 sm:p-4">
           <div className="fintech-control flex items-center gap-2 rounded-2xl p-2">
             <input
               value={aiText}

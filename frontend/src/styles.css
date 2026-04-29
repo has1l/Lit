@@ -662,6 +662,85 @@
     border-radius: 20px !important;
   }
 
+  .chat-open-shell {
+    height: calc(100dvh - 9rem) !important;
+    margin-top: -0.75rem;
+  }
+
+  .chat-open-header {
+    align-items: flex-start !important;
+    margin-bottom: 0.5rem !important;
+    gap: 0.5rem !important;
+  }
+
+  .chat-open-header .icon-tile {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 16px !important;
+  }
+
+  .chat-open-title {
+    font-size: 1.125rem !important;
+    line-height: 1.2 !important;
+  }
+
+  .chat-open-header p {
+    max-width: 13.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .chat-open-header .fintech-button-secondary {
+    min-height: 2.5rem;
+    border-radius: 16px !important;
+    padding: 0.55rem 0.75rem !important;
+    font-size: 0.8125rem !important;
+  }
+
+  .chat-open-card {
+    min-height: 0;
+    border-radius: 20px !important;
+  }
+
+  .chat-quick-row {
+    padding: 0.5rem 0.75rem !important;
+  }
+
+  .chat-quick-row .status-chip {
+    border-radius: 14px !important;
+    padding: 0.45rem 0.7rem !important;
+    font-size: 0.75rem !important;
+  }
+
+  .chat-message-list {
+    padding: 0.85rem !important;
+    scroll-padding-bottom: 1rem;
+  }
+
+  .chat-message-list > * + * {
+    margin-top: 0.75rem !important;
+  }
+
+  .chat-compose {
+    padding: 0.55rem !important;
+  }
+
+  .chat-compose .fintech-control {
+    border-radius: 18px !important;
+    padding: 0.35rem !important;
+  }
+
+  .chat-compose input {
+    padding: 0.7rem 0.75rem !important;
+  }
+
+  .chat-compose button {
+    width: 2.75rem !important;
+    height: 2.75rem !important;
+    border-radius: 16px !important;
+  }
+
   .assistant-chat-card {
     padding: 1.25rem !important;
   }
