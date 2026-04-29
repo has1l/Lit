@@ -802,7 +802,7 @@ def finish_day(body: FinishDayBody, current_user: Annotated[UserContext, Depends
     conn = get_connection()
     try:
         selections = conn.execute(
-            "SELECT ds.completed, g.points FROM daily_selections ds JOIN goals g ON ds.goal_id=g.id "
+            "SELECT ds.id, ds.goal_id, ds.completed, g.points FROM daily_selections ds JOIN goals g ON ds.goal_id=g.id "
             "WHERE ds.employee_email=? AND ds.date=?",
             (current_user.email, body.date),
         ).fetchall()
@@ -844,6 +844,10 @@ def finish_day(body: FinishDayBody, current_user: Annotated[UserContext, Depends
             "last_active_date=excluded.last_active_date",
             (current_user.email, new_total, new_streak, body.date),
         )
+        # Помечаем выполненные цели как completed
+        completed_goal_ids = [s["goal_id"] for s in selections if s["completed"]]
+        for gid in completed_goal_ids:
+            conn.execute("UPDATE goals SET status='completed' WHERE id=?", (gid,))
         conn.commit()
         return {
             "points_earned": earned, "bonus": bonus, "penalty": penalty,
@@ -860,6 +864,12 @@ def reset_day(date: str, current_user: Annotated[UserContext, Depends(get_curren
     conn = get_connection()
     try:
         conn.execute("DELETE FROM daily_selections WHERE employee_email=? AND date=?", (current_user.email, date))
+        # Возвращаем все цели сотрудника обратно в active (для тестирования)
+        now = datetime.now()
+        conn.execute(
+            "UPDATE goals SET status='active' WHERE employee_email=? AND month=? AND year=?",
+            (current_user.email, now.month, now.year),
+        )
         conn.commit()
         return {"ok": True}
     finally:

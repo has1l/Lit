@@ -51,3 +51,6 @@ export const closeMonth = (params = {}) => {
 
 export const suggestPoints = (goals) =>
   apiFetch('/goals/suggest-points', { method: 'POST', body: { goals } });
+
+export const resetDay = (date) =>
+  apiFetch(`/goals/daily/reset?date=${date}`, { method: 'DELETE' });

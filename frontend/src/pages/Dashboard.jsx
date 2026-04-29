@@ -9,7 +9,7 @@ import { useEmployeeData } from '../hooks/useEmployeeData.js';
 import { formatDay, formatAmount, paymentTypeRu, pluralDays } from '../lib/format.js';
 import {
   fetchGoals, fetchDailyTasks, selectDailyTasks,
-  completeDailyTask, uncompleteDailyTask, finishDay,
+  completeDailyTask, uncompleteDailyTask, finishDay, resetDay,
 } from '../api/goals.js';
 import { updateMyStatus } from '../api/employee.js';
 
@@ -183,8 +183,7 @@ export default function Dashboard({ openChatWithPrompt, navigate, profile }) {
   // ── Обработчики ───────────────────────────────────────────────────────────
 
   function openSelectionPhase() {
-    // По умолчанию выбираем все задачи
-    setSelectedIds(new Set(monthGoals.map((g) => g.id)));
+    setSelectedIds(new Set());
     setPhase('selecting');
   }
 
@@ -282,6 +281,12 @@ export default function Dashboard({ openChatWithPrompt, navigate, profile }) {
     setReasonDrafts({});
     setDayResult(null);
     localStorage.removeItem('lit-day');
+  }
+
+  async function handleResetDay() {
+    const today = new Date().toISOString().slice(0, 10);
+    await resetDay(today).catch(() => {});
+    startNewDay();
   }
 
   function handleRecommendationClick(rec) {
@@ -430,9 +435,14 @@ export default function Dashboard({ openChatWithPrompt, navigate, profile }) {
                   У вас {monthGoals.length} задач на месяц. Нажмите «Начать день», чтобы выбрать, над чем работать сегодня.
                 </p>
               )}
-              <Button className="mt-4 w-full sm:w-auto" onClick={openSelectionPhase}>
-                Начать рабочий день
-              </Button>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Button className="w-full sm:w-auto" onClick={openSelectionPhase}>
+                  Начать рабочий день
+                </Button>
+                <Button variant="secondary" className="w-full sm:w-auto" onClick={handleResetDay}>
+                  Сбросить день (тест)
+                </Button>
+              </div>
             </div>
           )}
 
@@ -621,9 +631,14 @@ export default function Dashboard({ openChatWithPrompt, navigate, profile }) {
               ) : (
                 <p className="mt-2 text-sm text-slate-400">Выполнено {completedCount} из {dailyTasks.length}</p>
               )}
-              <Button variant="secondary" className="mt-5 w-full sm:w-auto" onClick={startNewDay}>
-                Начать новый рабочий день
-              </Button>
+              <div className="mt-5 flex flex-wrap gap-2">
+                <Button variant="secondary" className="w-full sm:w-auto" onClick={startNewDay}>
+                  Начать новый рабочий день
+                </Button>
+                <Button variant="secondary" className="w-full sm:w-auto" onClick={handleResetDay}>
+                  Сбросить день (тест)
+                </Button>
+              </div>
             </div>
           )}
         </Card>
